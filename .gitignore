@@ -1,0 +1,104 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# VS Code Artifacts
+*.vscode
+*.code-workspace
+
+# Unwanted Directory
+*solution*
+*hls_project
+*__pycache__
+*build
+*obj
+*.pyc
+*useless
+
+# HLS artifacts
+*hls.log
+*.settings
+*.vivado*
+*.cproject
+*.project
+*.apc
+*.reference
+*.flow.log
+
+# octave artifacts
+*octave-workspace
+*~
+
+# Log Files
+*.log
+
+# LaTeX Auxiliry files
+*.aux
+*.fls
+*.fdb_latexmk
+*.nav
+*.toc
+*.snm
+*.synctex*
+*.synctex.gz
+*.run.xml
+*.ist
+*.bcf
+*.bbl
+*.blg
+
+# Valgrind artifacts
+*vgcore.*
+
+bin/
+lib/
+build/
+
+*octave-workspace
+
+*compile_commands.json
+.clangd
+.cache
+*.cache
+out/
+clangd.dex
+
+# Temporary file
+*.asv
+
+.ipynb_checkpoints
+debug-tools/*.dat
+*.cast
+*.mexa64
+*.mex
+
+data/*.dat

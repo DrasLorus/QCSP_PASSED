@@ -26,6 +26,8 @@ private:
     uint32_t counter;
 
 public:
+    const TIn_Type * get_pn() const { return pn; }
+
     TIn_Type process(TIn_Type re_in, TIn_Type im_in) {
         const uint32_t curr_counter = counter++;
         for (unsigned u = 0; u < q; u++) {
@@ -83,6 +85,8 @@ private:
     uint32_t counter;
 
 public:
+    const int8_t * get_pn() const { return pn; }
+
     uint32_t process(int32_t re_in, int32_t im_in) { // Inputs can be quantified on 17 bits
 #ifdef USE_PN_XOR_TRICK
         static constexpr uint32_t transit[2] = {0x0, 0xFFFFFFFF};
@@ -111,10 +115,10 @@ public:
 
             re_corr_registers[u] = re_tmp_corr;
             im_corr_registers[u] = im_tmp_corr;
-            
+
             // abs_coor is on 2 * (17 + log2q) + 1 bits, meaning q could be up to 16384 before an overflow
             abs_corr_registers[u] = uint64_t(re_tmp_corr * re_tmp_corr)
-                                  + uint64_t(im_tmp_corr * im_tmp_corr); 
+                                  + uint64_t(im_tmp_corr * im_tmp_corr);
         }
 
         return max_pow2<q>::max(abs_corr_registers);

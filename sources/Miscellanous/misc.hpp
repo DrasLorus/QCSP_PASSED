@@ -1,5 +1,8 @@
+#include <array>
 #ifndef _QCSP_PASSED_MISC_HPP_
 #define _QCSP_PASSED_MISC_HPP_ 1
+
+#define _USE_MATH_DEFINES
 
 #include <algorithm>
 #include <cmath>
@@ -7,6 +10,14 @@
 
 namespace QCSP {
 namespace StandaloneDetector {
+
+constexpr double pi      = (double) M_PI;
+constexpr double two_pi  = 2. * pi;
+constexpr double half_pi = pi / 2.;
+
+constexpr float pi_f      = (float) M_PI;
+constexpr float two_pi_f  = (float) (2. * pi);
+constexpr float half_pi_f = (float) (pi / 2.);
 
 template <typename T>
 constexpr bool is_pow2(T value) {
@@ -75,6 +86,16 @@ struct max_pow2 {
         return std::max(max_pow2<Tsize / 2>::max(a), max_pow2<Tsize / 2>::max(a + Tsize / 2));
     }
 };
+
+template <unsigned value>
+constexpr bool is_even() {
+    return value / 2U * 2U == value;
+}
+
+template <unsigned value>
+constexpr bool is_odd() {
+    return not is_even<value>();
+}
 
 } // namespace StandaloneDetector
 } // namespace QCSP

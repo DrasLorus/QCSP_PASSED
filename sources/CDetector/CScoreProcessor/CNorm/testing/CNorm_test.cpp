@@ -48,7 +48,7 @@ TEST_CASE("CNorm (L2) works for high snr inputs (q: 64)", "[norm][high][l2]") {
         results[i] = proc->process(re_in[i], im_in[i]);
     }
 
-        // Initialization Startup
+    // Initialization Startup
     for (int64_t i = 0; i < int64_t(q - 1); i++) {
         REQUIRE_THAT(results[i], Catch::Matchers::WithinRel(norms_out[i] * norms_out[i] + 1, 1e-9f));
     }

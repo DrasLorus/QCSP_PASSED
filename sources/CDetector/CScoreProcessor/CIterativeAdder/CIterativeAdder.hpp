@@ -47,9 +47,9 @@ public:
 
 /**
  * @brief CIterativeAdder Specialization for 16 bit input
- * 
+ *
  * @details This specialization assume a 16-bit quantified input, as delivered by USRPs
- * 
+ *
  * @tparam q size of the QCSP sequence
  */
 template <unsigned q>

@@ -32,6 +32,8 @@ private:
     CScoreAccumulator<N, q, TIn_Type> score_accumulator;
 
 public:
+    const TIn_Type * get_pn() const { return corr_abs_max.get_pn(); }
+
     TIn_Type process(TIn_Type re_in, TIn_Type im_in) {
         TIn_Type re_it, im_it;
 
@@ -87,6 +89,8 @@ private:
     CScoreAccumulator<N, q, TIn_Type> score_accumulator;
 
 public:
+    const TIn_Type * get_pn() const { return corr_abs_max.get_pn(); }
+
     TIn_Type process(TIn_Type re_in, TIn_Type im_in) {
         TIn_Type re_it, im_it;
 
@@ -132,6 +136,8 @@ private:
     CScoreAccumulator<N, q, int16_t> score_accumulator;
 
 public:
+    const int8_t * get_pn() const { return corr_abs_max.get_pn(); }
+
     uint64_t process_sqr(int16_t re_in, int16_t im_in) {
         int32_t re_it, im_it;
 

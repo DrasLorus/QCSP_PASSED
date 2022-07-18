@@ -11,7 +11,7 @@ namespace StandaloneDetector {
 
 /**
  * @brief Compute the square value of 2-Norm of a q-long complex vector
- * 
+ *
  * @details The norm is computed iteratively on magnitudes, so the square value comes naturally.
  *
  * @tparam Tq size of the vector
@@ -61,8 +61,8 @@ public:
 
 /**
  * @brief CNorm Specialization for 16 bit input.
- * 
- * @details Compute the square value of 2-Norm of a q-long complex vector. 
+ *
+ * @details Compute the square value of 2-Norm of a q-long complex vector.
  *  The norm is computed iteratively on magnitudes, so the square value comes naturally.
  *  This specialization assume a 16-bit quantified input, as delivered by USRPs
  *

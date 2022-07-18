@@ -146,20 +146,24 @@ endif ()
 # ##################################################################################################
 # ##################################################################################################
 
-add_library (l2norm OBJECT sources/CScoreProcessor/CNorm/CNorm.cpp)
-target_include_directories (l2norm PUBLIC sources)
+add_library (l2norm OBJECT sources/CDetector/CScoreProcessor/CNorm/CNorm.cpp)
+target_include_directories (l2norm PUBLIC sources/CDetector sources)
 
-add_library (iterativeadder OBJECT sources/CScoreProcessor/CIterativeAdder/CIterativeAdder.cpp)
-target_include_directories (iterativeadder PUBLIC sources)
+add_library (
+  iterativeadder OBJECT sources/CDetector/CScoreProcessor/CIterativeAdder/CIterativeAdder.cpp
+)
+target_include_directories (iterativeadder PUBLIC sources/CDetector sources)
 
-add_library (corrabsmax OBJECT sources/CScoreProcessor/CCorrAbsMax/CCorrAbsMax.cpp)
-target_include_directories (corrabsmax PUBLIC sources)
+add_library (corrabsmax OBJECT sources/CDetector/CScoreProcessor/CCorrAbsMax/CCorrAbsMax.cpp)
+target_include_directories (corrabsmax PUBLIC sources/CDetector sources)
 
-add_library (scoreaccu OBJECT sources/CScoreProcessor/CScoreAccumulator/CScoreAccumulator.cpp)
-target_include_directories (scoreaccu PUBLIC sources)
+add_library (
+  scoreaccu OBJECT sources/CDetector/CScoreProcessor/CScoreAccumulator/CScoreAccumulator.cpp
+)
+target_include_directories (scoreaccu PUBLIC sources/CDetector sources)
 
-add_library (score_processor OBJECT sources/CScoreProcessor/CScoreProcessor.cpp)
-target_include_directories (score_processor PUBLIC sources sources/CScoreProcessor)
+add_library (score_processor OBJECT sources/CDetector/CScoreProcessor/CScoreProcessor.cpp)
+target_include_directories (score_processor PUBLIC sources sources/CDetector)
 target_link_libraries (
   score_processor
   PUBLIC corrabsmax
@@ -167,6 +171,10 @@ target_link_libraries (
          iterativeadder
          scoreaccu
 )
+
+add_library (detectors OBJECT sources/CDetector/CDetector.cpp)
+target_include_directories (score_processor PUBLIC sources)
+target_link_libraries (detectors PUBLIC score_processor)
 
 if (ENABLE_TESTING)
   include (CTest)
@@ -176,8 +184,8 @@ if (ENABLE_TESTING)
   target_link_libraries (catch_common_${PROJECT_NAME} PUBLIC Catch2::Catch2)
 
   add_executable (
-    l2norm_tests sources/CScoreProcessor/CNorm/testing/CNorm_test.cpp
-                 sources/CScoreProcessor/CNorm/testing/CNorm_i16_test.cpp
+    l2norm_tests sources/CDetector/CScoreProcessor/CNorm/testing/CNorm_test.cpp
+                 sources/CDetector/CScoreProcessor/CNorm/testing/CNorm_i16_test.cpp
   )
   target_link_libraries (l2norm_tests PUBLIC l2norm catch_common_${PROJECT_NAME} matioCpp::matioCpp)
 
@@ -185,8 +193,8 @@ if (ENABLE_TESTING)
 
   add_executable (
     iterativeadder_tests
-    sources/CScoreProcessor/CIterativeAdder/testing/CIterativeAdder_test.cpp
-    sources/CScoreProcessor/CIterativeAdder/testing/CIterativeAdder_i16_test.cpp
+    sources/CDetector/CScoreProcessor/CIterativeAdder/testing/CIterativeAdder_test.cpp
+    sources/CDetector/CScoreProcessor/CIterativeAdder/testing/CIterativeAdder_i16_test.cpp
   )
   target_link_libraries (
     iterativeadder_tests PUBLIC iterativeadder catch_common_${PROJECT_NAME} matioCpp::matioCpp
@@ -195,8 +203,8 @@ if (ENABLE_TESTING)
   catch_discover_tests (iterativeadder_tests WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
   add_executable (
-    corrabsmax_tests sources/CScoreProcessor/CCorrAbsMax/testing/CCorrAbsMax_test.cpp
-                     sources/CScoreProcessor/CCorrAbsMax/testing/CCorrAbsMax_i16_test.cpp
+    corrabsmax_tests sources/CDetector/CScoreProcessor/CCorrAbsMax/testing/CCorrAbsMax_test.cpp
+                     sources/CDetector/CScoreProcessor/CCorrAbsMax/testing/CCorrAbsMax_i16_test.cpp
   )
   target_link_libraries (
     corrabsmax_tests PUBLIC corrabsmax catch_common_${PROJECT_NAME} matioCpp::matioCpp
@@ -206,8 +214,8 @@ if (ENABLE_TESTING)
 
   add_executable (
     scoreaccu_tests
-    sources/CScoreProcessor/CScoreAccumulator/testing/CScoreAccumulator_test.cpp
-    sources/CScoreProcessor/CScoreAccumulator/testing/CScoreAccumulator_i16_test.cpp
+    sources/CDetector/CScoreProcessor/CScoreAccumulator/testing/CScoreAccumulator_test.cpp
+    sources/CDetector/CScoreProcessor/CScoreAccumulator/testing/CScoreAccumulator_i16_test.cpp
   )
   target_link_libraries (
     scoreaccu_tests PUBLIC scoreaccu catch_common_${PROJECT_NAME} matioCpp::matioCpp
@@ -216,13 +224,22 @@ if (ENABLE_TESTING)
   catch_discover_tests (scoreaccu_tests WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
   add_executable (
-    scoreproc_tests sources/CScoreProcessor/testing/CScoreProcessor_test.cpp
-                    sources/CScoreProcessor/testing/CScoreProcessor_i16_test.cpp
+    scoreproc_tests sources/CDetector/CScoreProcessor/testing/CScoreProcessor_test.cpp
+                    sources/CDetector/CScoreProcessor/testing/CScoreProcessor_i16_test.cpp
   )
   target_link_libraries (
-    scoreproc_tests PUBLIC scoreaccu catch_common_${PROJECT_NAME} matioCpp::matioCpp
+    scoreproc_tests PUBLIC score_processor catch_common_${PROJECT_NAME} matioCpp::matioCpp
   )
 
   catch_discover_tests (scoreproc_tests WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
+  add_executable (
+    detector_tests sources/CDetector/testing/CDetector_high_test.cpp
+                   sources/CDetector/testing/CDetector_low_test.cpp
+  )
+  target_link_libraries (
+    detector_tests PUBLIC detectors catch_common_${PROJECT_NAME} matioCpp::matioCpp
+  )
+
+  catch_discover_tests (detector_tests WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 endif ()

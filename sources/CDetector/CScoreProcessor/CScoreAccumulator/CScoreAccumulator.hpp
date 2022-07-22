@@ -31,7 +31,8 @@ public:
         const Tin_type old_max       = fifos_max[curr_counter];
         const Tin_type old_score     = score_registers[score_counter];
 
-        counter = (curr_counter + 1) % (N * q);
+        counter = (curr_counter + 1) * uint32_t(curr_counter != (N * q - 1)); // Faster !
+        // counter = (curr_counter + 1) % (N * q);
 
         const Tin_type new_score = old_score + new_max - old_max;
 
@@ -80,7 +81,8 @@ public:
         const uint32_t old_max       = fifos_max[curr_counter];
         const uint32_t old_score     = score_registers[score_counter];
 
-        counter = (curr_counter + 1) % (N * q);
+        counter = (curr_counter + 1) * uint32_t(curr_counter != (N * q - 1)); // Faster !
+        // counter = (curr_counter + 1) % (N * q);
 
         const uint32_t new_score = old_score + new_max - old_max;
 
@@ -102,3 +104,4 @@ public:
 } // namespace QCSP
 
 #endif // _QCSP_PASSED_SCORE_ACCUMULATOR_HPP_
+\

@@ -67,6 +67,7 @@ private:
     void update_state(const TIn_Type * __restrict scores, state_t * __restrict state) {
         const bool     frame_already_detected = state->frame_detected;
         const TIn_Type current_score          = state->max_score;
+        const uint64_t current_idx            = state->chip_from_max;
         const TIn_Type current_cfos           = state->frequency_offset;
         const uint64_t current_count          = state->chip_since_last_det + 1;
 
@@ -75,7 +76,7 @@ private:
         const bool     higher_score   = current_score < *max_score;
         const bool     over_threshold = *max_score > _threshold;
         const bool     max_found      = current_count >= window_size;
-        const bool     relaxed        = current_count >= window_size * 2 or current_count == 0;
+        const bool     relaxed        = current_count >= (window_size * 2) or current_count == 0;
         const TIn_Type local_cfos     = frequency_errors[size_t(max_score - scores)];
 
         const bool fetch_new_values = not(frame_already_detected and not(relaxed)) or (higher_score and not(max_found) and not(relaxed));
@@ -90,7 +91,7 @@ private:
         state->frame_detected      = (frame_already_detected and not(relaxed)) or over_threshold;
         state->max_found           = max_found and not(relaxed) and frame_already_detected;
         state->chip_since_last_det = uint64_t(frame_already_detected) * new_count;
-        state->chip_from_max       = uint64_t(higher_score and frame_already_detected and not(max_found)) * new_count;
+        state->chip_from_max       = uint64_t(fetch_new_values) * new_count + uint64_t(not fetch_new_values) * current_idx;
     }
 
 public:

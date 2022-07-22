@@ -96,6 +96,8 @@ TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for high snr inputs (q: 64, N: 60
             const auto & result_i   = results[i];
             const auto & result_ip1 = results[i + 1];
 
+            const int64_t chip_no = result_ip1.second - detector_t::window_size + result_ip1.first.chip_from_max;
+
             // * If you want to explore the results, uncomment the 6 following lines
             // printf("-- Detection no %ld score exceeded the threshold of %5.1f at chip no %ld,\n"
             //        "-- for a score of %16.8f and a frequency offset of %16.8e Hz.\n",
@@ -107,7 +109,7 @@ TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for high snr inputs (q: 64, N: 60
             REQUIRE(result_i.second == (i >> 1) * 19200 + 7680);
             REQUIRE_THAT(result_i.first.max_score, Catch::Matchers::WithinRel(low_score, tolerance));
             REQUIRE_THAT(result_i.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
-            REQUIRE(int64_t(result_ip1.second - result_ip1.first.chip_from_max) == ((i >> 1) * 19200 + 11520));
+            REQUIRE(chip_no == ((i >> 1) * 19200 + 11520 - 1));
             REQUIRE_THAT(result_ip1.first.max_score, Catch::Matchers::WithinRel(high_score, tolerance));
             REQUIRE_THAT(result_ip1.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
         }
@@ -141,6 +143,8 @@ TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for high snr inputs (q: 64, N: 60
             const auto & result_i   = results[i];
             const auto & result_ip1 = results[i + 1];
 
+            const int64_t chip_no = result_ip1.second - detector_t::window_size + result_ip1.first.chip_from_max;
+
             // * If you want to explore the results, uncomment the 6 following lines
             // printf("-- Detection no %ld score exceeded the threshold of %5.1f at chip no %ld,\n"
             //        "-- for a score of %16.8f and a frequency offset of %16.8e Hz.\n",
@@ -152,7 +156,7 @@ TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for high snr inputs (q: 64, N: 60
             REQUIRE(result_i.second == (i >> 1) * 19200 + 7680);
             REQUIRE_THAT(result_i.first.max_score, Catch::Matchers::WithinRel(low_score, tolerance));
             REQUIRE_THAT(result_i.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
-            REQUIRE(int64_t(result_ip1.second - result_ip1.first.chip_from_max) == ((i >> 1) * 19200 + 11520));
+            REQUIRE(chip_no == ((i >> 1) * 19200 + 11520 - 1));
             REQUIRE_THAT(result_ip1.first.max_score, Catch::Matchers::WithinRel(high_score, tolerance));
             REQUIRE_THAT(result_ip1.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
         }
@@ -248,6 +252,7 @@ TEMPLATE_TEST_CASE("CDetectorSerial (raw) works for high snr inputs (q: 64, N: 6
             const auto & result_i   = results[i];
             const auto & result_ip1 = results[i + 1];
 
+            const int64_t chip_no = result_ip1.second - detector_t::window_size + result_ip1.first.chip_from_max;
 
             // * If you want to explore the results, uncomment the 6 following lines
             // printf("-- Detection no %ld score exceeded the threshold of %5.1f at chip no %ld,\n"
@@ -260,7 +265,7 @@ TEMPLATE_TEST_CASE("CDetectorSerial (raw) works for high snr inputs (q: 64, N: 6
             REQUIRE(result_i.second == (i >> 1) * 19200 + 7680);
             REQUIRE_THAT(result_i.first.max_score, Catch::Matchers::WithinRel(low_score, tolerance));
             REQUIRE_THAT(result_i.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
-            REQUIRE(int64_t(result_ip1.second - result_ip1.first.chip_from_max) == ((i >> 1) * 19200 + 11520));
+            REQUIRE(chip_no == ((i >> 1) * 19200 + 11520 - 1));
             REQUIRE_THAT(result_ip1.first.max_score, Catch::Matchers::WithinRel(high_score, tolerance));
             REQUIRE_THAT(result_ip1.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
         }
@@ -294,6 +299,7 @@ TEMPLATE_TEST_CASE("CDetectorSerial (raw) works for high snr inputs (q: 64, N: 6
             const auto & result_i   = results[i];
             const auto & result_ip1 = results[i + 1];
 
+            const int64_t chip_no = result_ip1.second - detector_t::window_size + result_ip1.first.chip_from_max;
 
             // * If you want to explore the results, uncomment the 6 following lines
             // printf("-- Detection no %ld score exceeded the threshold of %5.1f at chip no %ld,\n"
@@ -306,7 +312,7 @@ TEMPLATE_TEST_CASE("CDetectorSerial (raw) works for high snr inputs (q: 64, N: 6
             REQUIRE(result_i.second == (i >> 1) * 19200 + 7680);
             REQUIRE_THAT(result_i.first.max_score, Catch::Matchers::WithinRel(low_score, tolerance));
             REQUIRE_THAT(result_i.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
-            REQUIRE(int64_t(result_ip1.second - result_ip1.first.chip_from_max) == ((i >> 1) * 19200 + 11520));
+            REQUIRE(chip_no == ((i >> 1) * 19200 + 11520 - 1));
             REQUIRE_THAT(result_ip1.first.max_score, Catch::Matchers::WithinRel(high_score, tolerance));
             REQUIRE_THAT(result_ip1.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
         }

@@ -6,9 +6,12 @@
 #include <vector>
 
 using namespace QCSP::StandaloneDetector;
+using std::string;
 using std::vector;
 
-TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for low snr inputs (q: 64, N: 60, p_omega: 1)", "[detector][low][l2][!mayfail][.]", float, double) {
+// Doesn't work for double, as the score calculations differs.
+
+TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for low snr inputs (q: 64, N: 60, p_omega: 1)", "[detector][low][l2]", float) {
 
     constexpr unsigned q       = 64;
     constexpr unsigned N       = 60;
@@ -42,16 +45,10 @@ TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for low snr inputs (q: 64, N: 60,
     const vector<TestType> im_in((float *) cpx_ptr->Im, ((float *) cpx_ptr->Im) + tmp_mat->dims[0]);
 
     Mat_VarFree(tmp_mat);
-
-    // tmp_mat = Mat_VarRead(data_file, "score_l2_infdB_w1_q64_N60_0_n10");
-    // if (not bool(tmp_mat)) {
-    //     throw "score_l2_infdB_w1_q64_N60_0_n10 can't be loaded.";
-    // }
-
-    // const vector<float> score_out((float *) tmp_mat->data, ((float *) tmp_mat->data) + tmp_mat->dims[0]);
-
-    // Mat_VarFree(tmp_mat);
     Mat_Close(data_file);
+
+    constexpr unsigned run_size = N * q * 5;
+
     constexpr uint32_t step_denominator = 1U;
 
     using detector_t = CDetectorSerial<N, q, p_omega, TestType, true>;
@@ -61,11 +58,40 @@ TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for low snr inputs (q: 64, N: 60,
     DetectionState<TestType, TestType, p_omega> running_state {false, false, {0.f}, 0.f, 0LU, 0LU, 0.f};
 
     SECTION("Standard Score") {
-        constexpr TestType threshold = 138.5f;
-        detector_t *       proc      = new detector_t(
-                       pn.data(),
-                       threshold,
-                       step_denominator);
+        constexpr TestType threshold = 140.5f;
+
+        const matioCpp::File MatFile("../data/test_data_w1_nofreq.mat", matioCpp::FileMode::ReadOnly);
+        if (not MatFile.isOpen()) {
+            throw "../data/test_data_w1_nofreq.mat can't be opened.";
+        }
+
+        const matioCpp::Vector<float> score_mat = MatFile.read("score_l2_m10dB_w1_q64_N60_0_n30").asVector<float>();
+        if ((not score_mat.isValid()) or (score_mat.size() == 0)) {
+            throw "score_l2_m10dB_w1_q64_N60_0_n30 can't be loaded.";
+        }
+
+        const vector<TestType> score_out(score_mat.begin(), score_mat.end());
+
+        vector<TestType> det_scores(30, 0);
+        vector<int64_t>  det_idxs(30, 0);
+        vector<TestType> max_scores(30, 0);
+        vector<int64_t>  max_idxs(30, 0);
+        for (unsigned u = 0; u < 30U; u++) {
+            const auto begin = score_out.data() + u * run_size;
+            const auto end   = score_out.data() + (u + 1) * run_size;
+
+            const auto det_ptr = std::find_if(begin, end, [&](TestType value) { return value > threshold; });
+            det_scores[u]      = *det_ptr;
+            det_idxs[u]        = det_ptr - score_out.data();
+
+            const auto max_ptr = std::max_element(begin, end);
+            max_scores[u]      = *max_ptr;
+            max_idxs[u]        = max_ptr - score_out.data();
+        }
+        detector_t * proc = new detector_t(
+            pn.data(),
+            threshold,
+            step_denominator);
 
         REQUIRE(proc->threshold() == threshold);
 
@@ -87,14 +113,14 @@ TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for low snr inputs (q: 64, N: 60,
 
         REQUIRE(results.size() == 60LU);
 
-        constexpr TestType low_score  = TestType(1.);
-        constexpr TestType high_score = TestType(480.);
-        constexpr TestType cfos       = TestType(0.);
-        constexpr TestType tolerance  = TestType(1e-5);
+        constexpr TestType cfos      = TestType(0.);
+        constexpr TestType tolerance = TestType(1e-5);
 
         for (int64_t i = 0; i < int64_t(results.size()); i += 2) {
             const auto & result_i   = results[i];
             const auto & result_ip1 = results[i + 1];
+
+            const int64_t chip_no = result_ip1.second - detector_t::window_size + result_ip1.first.chip_from_max;
 
             // * If you want to explore the results, uncomment the 6 following lines
             // printf("-- Detection no %ld score exceeded the threshold of %5.1f at chip no %ld,\n"
@@ -102,24 +128,53 @@ TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for low snr inputs (q: 64, N: 60,
             //        i >> 1, proc->threshold(), result_i.second, result_i.first.max_score, result_i.first.frequency_offset);
             // printf("-- Detection no %ld max has been found at chip no %ld,\n"
             //        "-- for a score of %16.8f and a frequency offset of %16.8e Hz.\n",
-            //        i >> 1, result_ip1.second - result_ip1.first.chip_from_max, result_ip1.first.max_score, result_ip1.first.frequency_offset);
+            //        i >> 1, chip_no, result_ip1.first.max_score, result_ip1.first.frequency_offset);
 
-            REQUIRE(result_i.second == (i >> 1) * 19200 + 7680);
-            REQUIRE_THAT(result_i.first.max_score, Catch::Matchers::WithinRel(low_score, tolerance));
+            REQUIRE((result_i.second == det_idxs[i >> 1]));
+            REQUIRE_THAT(result_i.first.max_score, Catch::Matchers::WithinRel(det_scores[i >> 1], tolerance));
             REQUIRE_THAT(result_i.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
-            REQUIRE(int64_t(result_ip1.second - result_ip1.first.chip_from_max) == ((i >> 1) * 19200 + 11520));
-            REQUIRE_THAT(result_ip1.first.max_score, Catch::Matchers::WithinRel(high_score, tolerance));
+            REQUIRE(chip_no == max_idxs[(i >> 1)]);
+            REQUIRE_THAT(result_ip1.first.max_score, Catch::Matchers::WithinRel(max_scores[(i >> 1)], tolerance));
             REQUIRE_THAT(result_ip1.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
         }
         delete proc;
     }
 
     SECTION("Square Score") {
-        constexpr TestType threshold = 130.5f;
-        detector_t *       proc      = new detector_t(
-                       pn.data(),
-                       threshold,
-                       step_denominator);
+        constexpr TestType threshold = TestType(350.5);
+
+        const matioCpp::File MatFile("../data/test_data_w1_nofreq.mat", matioCpp::FileMode::ReadOnly);
+        if (not MatFile.isOpen()) {
+            throw "../data/test_data_w1_nofreq.mat can't be opened.";
+        }
+
+        const matioCpp::Vector<float> score_mat = MatFile.read("score_sqr_l2_m10dB_w1_q64_N60_0_n30").asVector<float>();
+        if ((not score_mat.isValid()) or (score_mat.size() == 0)) {
+            throw "score_sqr_l2_m10dB_w1_q64_N60_0_n30 can't be loaded.";
+        }
+
+        const vector<TestType> score_out(score_mat.begin(), score_mat.end());
+
+        vector<TestType> det_scores(30, 0);
+        vector<int64_t>  det_idxs(30, 0);
+        vector<TestType> max_scores(30, 0);
+        vector<int64_t>  max_idxs(30, 0);
+        for (unsigned u = 0; u < 30U; u++) {
+            const auto begin = score_out.data() + u * run_size;
+            const auto end   = score_out.data() + (u + 1) * run_size;
+
+            const auto det_ptr = std::find_if(begin, end, [&](TestType value) { return value > threshold; });
+            det_scores[u]      = *det_ptr;
+            det_idxs[u]        = det_ptr - score_out.data();
+
+            const auto max_ptr = std::max_element(begin, end);
+            max_scores[u]      = *max_ptr;
+            max_idxs[u]        = max_ptr - score_out.data();
+        }
+        detector_t * proc = new detector_t(
+            pn.data(),
+            threshold,
+            step_denominator);
 
         REQUIRE(proc->threshold() == threshold);
 
@@ -139,16 +194,16 @@ TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for low snr inputs (q: 64, N: 60,
             REQUIRE((running_state.max_score == running_state.scores[0] or (running_state.frame_detected)));
         }
 
-        REQUIRE(results.size() == 20LU);
+        REQUIRE(results.size() == 60LU);
 
-        constexpr TestType low_score  = TestType(1.);
-        constexpr TestType high_score = TestType(3840.);
-        constexpr TestType cfos       = TestType(0.);
-        constexpr TestType tolerance  = TestType(1e-5);
+        constexpr TestType cfos      = TestType(0.);
+        constexpr TestType tolerance = TestType(5e-5);
 
         for (int64_t i = 0; i < int64_t(results.size()); i += 2) {
             const auto & result_i   = results[i];
             const auto & result_ip1 = results[i + 1];
+
+            const int64_t chip_no = result_ip1.second - detector_t::window_size + result_ip1.first.chip_from_max;
 
             // * If you want to explore the results, uncomment the 6 following lines
             // printf("-- Detection no %ld score exceeded the threshold of %5.1f at chip no %ld,\n"
@@ -156,13 +211,13 @@ TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for low snr inputs (q: 64, N: 60,
             //        i >> 1, proc->threshold(), result_i.second, result_i.first.max_score, result_i.first.frequency_offset);
             // printf("-- Detection no %ld max has been found at chip no %ld,\n"
             //        "-- for a score of %16.8f and a frequency offset of %16.8e Hz.\n",
-            //        i >> 1, result_ip1.second - result_ip1.first.chip_from_max, result_ip1.first.max_score, result_ip1.first.frequency_offset);
+            //        i >> 1, chip_no, result_ip1.first.max_score, result_ip1.first.frequency_offset);
 
-            REQUIRE(result_i.second == (i >> 1) * 19200 + 7680);
-            REQUIRE_THAT(result_i.first.max_score, Catch::Matchers::WithinRel(low_score, tolerance));
+            REQUIRE((result_i.second == det_idxs[i >> 1]));
+            REQUIRE_THAT(result_i.first.max_score, Catch::Matchers::WithinRel(det_scores[i >> 1], tolerance));
             REQUIRE_THAT(result_i.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
-            REQUIRE(int64_t(result_ip1.second - result_ip1.first.chip_from_max) == ((i >> 1) * 19200 + 11520));
-            REQUIRE_THAT(result_ip1.first.max_score, Catch::Matchers::WithinRel(high_score, tolerance));
+            REQUIRE(chip_no == max_idxs[(i >> 1)]);
+            REQUIRE_THAT(result_ip1.first.max_score, Catch::Matchers::WithinRel(max_scores[(i >> 1)], tolerance));
             REQUIRE_THAT(result_ip1.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
         }
         delete proc;
@@ -320,4 +375,3 @@ TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for low snr inputs (q: 64, N: 60,
 //     }
 //     delete proc;
 // }
-

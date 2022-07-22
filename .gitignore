@@ -102,3 +102,6 @@ debug-tools/*.dat
 *.mex
 
 data/*.dat
+
+data/*.mat
+

@@ -1,0 +1,105 @@
+function [score, iter_fcts, cabs_max, norms_l2] = compute_ts_score(p_omega, step_denominator, N, PN, normed, squared, noisy_seq)
+%COMPUTE_TS_SCORE Compute time sliding score the closest to C++ as possible
+%   Detailed explanation goes here
+
+clear corr_abs_max
+
+q    = length(PN);
+
+rot_step = min(pi / step_denominator, 4 * step_denominator);
+
+iter_fcts = single(zeros(length(noisy_seq), p_omega));
+cabs_max  = single(zeros(length(noisy_seq), p_omega));
+norms_l2  = single(zeros(length(noisy_seq), 1));
+score     = single(zeros(length(noisy_seq), p_omega));
+
+% corr_i_r = zeros(p_theta, q);
+
+fifo_q = zeros(p_omega, q);
+fifo_M = zeros(p_omega, N * q);
+fifo_S = zeros(p_omega, q);
+
+counter_q = uint32(1);
+counter_M = uint32(1);
+counter_S = uint32(1);
+
+vec_spanf  = int32(-(p_omega - 1) : 2 : (p_omega - 1));
+
+
+max_length = int32(max(2 * q * step_denominator, 1));
+
+
+% vec_length(vec_spanf ~= 0) = abs(2 * pi ./ (rot_step .* double(vec_spanf(vec_spanf ~= 0))) * q);
+
+% rotations  = zeros(p_omega, max_length);
+% local_rots = zeros(p_omega, 1);
+% for freq_idx = 1 : p_omega
+%     local_rot = rot_step * double(vec_spanf(freq_idx));
+% 
+%     local_rots(freq_idx) = local_rot;
+%     rotations(freq_idx, :) = exp(1i * local_rot / q * double(0 : max_length - 1));
+% end
+rotations    = exp(1i * pi / (step_denominator * q) * double(0 : max_length - 1));
+rotation_increments = int32([vec_spanf(1 : floor(p_omega / 2)) + int32(max_length), vec_spanf(floor(p_omega / 2) + 1 : end)]);
+
+rotation_counter    = int32(ones(1, p_omega));
+
+norm_accumulators = zeros(p_omega, 1);
+
+% corr_registers = zeros(p_omega, q);
+
+for chip = 1 : length(noisy_seq)
+    
+%     linear_ids = (rotation_counter - 1) * uint32(p_omega) + uint32(1 : p_omega);
+    linear_ids = rotation_counter;
+
+    new_values = noisy_seq(chip) .* reshape(rotations(linear_ids), p_omega, 1);
+    old_values = fifo_q(:, counter_q);
+    
+    new_counters     = rotation_counter + rotation_increments;
+    rotation_counter = mod(new_counters, max_length);
+    
+    rotation_counter(rotation_counter == 0) = max_length;
+%     rotation_counter  = mod(rotation_counter, max_length) + 1;
+    
+    norm_accumulators = norm_accumulators + new_values .* conj(new_values) - old_values .* conj(old_values);
+    
+%     local_norms = vecnorm([new_values, fifo_q(:, 1 : end - 1)], 2);
+    if squared    
+        local_norms = max(norm_accumulators, 0);
+    else
+        local_norms = sqrt(max(norm_accumulators, 0));
+    end
+    
+    norm_factors = 1 ./ local_norms;
+    
+    norm_factors(isinf(norm_factors)) = 1;
+
+    iterative_factors = (new_values -  old_values);
+
+    vec_new_max = corr_abs_max(iterative_factors, PN, norm_factors, normed, squared);
+    
+    % Update score
+    vec_old_max = fifo_M(:, counter_M);
+    old_score   = fifo_S(:, counter_S);
+    new_score   = old_score + vec_new_max - vec_old_max;
+
+    % update fifos
+    fifo_M(:, counter_M) = vec_new_max;
+    fifo_S(:, counter_S) = new_score;
+    fifo_q(:, counter_q) = new_values;
+    
+    counter_q = mod(counter_M, q) + 1;
+    counter_M = mod(counter_M, N * q) + 1;
+    counter_S = mod(counter_S, q) + 1;
+
+    % MATLAB/Octave Logging
+    iter_fcts(chip, :) = single(iterative_factors);
+    cabs_max(chip, :)  = single(vec_new_max);
+    norms_l2(chip, 1)  = single(local_norms(1));
+    score(chip, :)     = single(new_score);
+
+end
+
+end
+

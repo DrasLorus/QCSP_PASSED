@@ -104,4 +104,3 @@ public:
 } // namespace QCSP
 
 #endif // _QCSP_PASSED_SCORE_ACCUMULATOR_HPP_
-\

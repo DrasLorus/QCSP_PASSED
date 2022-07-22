@@ -13,7 +13,7 @@ TEST_CASE("CScoreAccumulator works for high snr inputs (q: 64, N: 60)", "[scorea
     constexpr unsigned q = 64;
     constexpr unsigned N = 60;
 
-    matioCpp::File data_file("../data/test_data.mat", matioCpp::FileMode::ReadOnly);
+    matioCpp::File data_file("../data/test_data_w1_nofreq.mat", matioCpp::FileMode::ReadOnly);
 
     const matioCpp::Vector<float> cabs_in = data_file.read("cabs_max_l2_infdB_w1_q64_N60_0_n10").asVector<float>();
     if (cabs_in.size() == 0 || not cabs_in.isValid()) {
@@ -47,7 +47,7 @@ TEST_CASE("CScoreAccumulator works for low snr inputs (q: 64, N: 60)", "[scoreac
     constexpr unsigned q = 64;
     constexpr unsigned N = 60;
 
-    matioCpp::File data_file("../data/test_data.mat", matioCpp::FileMode::ReadOnly);
+    matioCpp::File data_file("../data/test_data_w1_nofreq.mat", matioCpp::FileMode::ReadOnly);
 
     const matioCpp::Vector<float> cabs_in = data_file.read("cabs_max_l2_m10dB_w1_q64_N60_0_n30").asVector<float>();
     if (cabs_in.size() == 0 || not cabs_in.isValid()) {

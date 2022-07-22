@@ -20,7 +20,7 @@ TEST_CASE("CScoreAccumulator int16_t works for high snr inputs (q: 64, N: 60)", 
     constexpr float in_scale_factor = float(1U << (In_W - In_I));
     constexpr float ot_scale_factor = 1. / float(1 << (Out_W - Out_I));
 
-    matioCpp::File data_file("../data/test_data.mat", matioCpp::FileMode::ReadOnly);
+    matioCpp::File data_file("../data/test_data_w1_nofreq.mat", matioCpp::FileMode::ReadOnly);
 
     const matioCpp::Vector<float> cabs_in = data_file.read("cabs_max_l2_infdB_w1_q64_N60_0_n10").asVector<float>();
     if (cabs_in.size() == 0 || not cabs_in.isValid()) {
@@ -65,7 +65,7 @@ TEST_CASE("CScoreAccumulator int16_t works for low snr inputs (q: 64, N: 60)", "
     constexpr float  in_scale_factor = float(1U << (In_W - In_I));
     constexpr double ot_scale_factor = 1. / double(1 << (Out_W - Out_I));
 
-    matioCpp::File data_file("../data/test_data.mat", matioCpp::FileMode::ReadOnly);
+    matioCpp::File data_file("../data/test_data_w1_nofreq.mat", matioCpp::FileMode::ReadOnly);
 
     const matioCpp::Vector<float> cabs_in = data_file.read("cabs_max_l2_m10dB_w1_q64_N60_0_n30").asVector<float>();
     if (cabs_in.size() == 0 || not cabs_in.isValid()) {

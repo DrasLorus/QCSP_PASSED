@@ -13,9 +13,9 @@ TEST_CASE("CNorm (L2) works for high snr inputs (q: 64)", "[norm][high][l2]") {
 
     constexpr unsigned q = 64;
 
-    mat_t * data_file = Mat_Open("../data/test_data.mat", MAT_ACC_RDONLY);
+    mat_t * data_file = Mat_Open("../data/test_data_w1_nofreq.mat", MAT_ACC_RDONLY);
     if (not bool(data_file)) {
-        throw "../data/test_data.mat can't be opened.";
+        throw "../data/test_data_w1_nofreq.mat can't be opened.";
     }
 
     matvar_t * tmp_mat = Mat_VarRead(data_file, "data_input_infdB_w1_q64_N60_0_n10");
@@ -65,9 +65,9 @@ TEST_CASE("CNorm (L2) works for low snr inputs (q: 64)", "[norm][low][l2]") {
 
     constexpr unsigned q = 64;
 
-    mat_t * data_file = Mat_Open("../data/test_data.mat", MAT_ACC_RDONLY);
+    mat_t * data_file = Mat_Open("../data/test_data_w1_nofreq.mat", MAT_ACC_RDONLY);
     if (not bool(data_file)) {
-        throw "../data/test_data.mat can't be opened.";
+        throw "../data/test_data_w1_nofreq.mat can't be opened.";
     }
 
     matvar_t * tmp_mat = Mat_VarRead(data_file, "data_input_m10dB_w1_q64_N60_0_n30");

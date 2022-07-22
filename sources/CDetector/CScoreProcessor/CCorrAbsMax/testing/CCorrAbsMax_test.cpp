@@ -28,9 +28,9 @@ TEST_CASE("CCorrAbsMax works for high snr inputs (q: 64, N: 60)", "[corrabsmax][
         throw "Fetched N and local N don't match.";
     }
 
-    mat_t * data_file = Mat_Open("../data/test_data.mat", MAT_ACC_RDONLY);
+    mat_t * data_file = Mat_Open("../data/test_data_w1_nofreq.mat", MAT_ACC_RDONLY);
     if (not bool(data_file)) {
-        throw "../data/test_data.mat can't be opened.";
+        throw "../data/test_data_w1_nofreq.mat can't be opened.";
     }
 
     matvar_t * tmp_mat = Mat_VarRead(data_file, "iter_fcts_infdB_w1_q64_N60_0_n10");
@@ -90,9 +90,9 @@ TEST_CASE("CCorrAbsMax works for low snr inputs (q: 64, N: 60)", "[corrabsmax][l
         throw "Fetched N and local N don't match.";
     }
 
-    mat_t * data_file = Mat_Open("../data/test_data.mat", MAT_ACC_RDONLY);
+    mat_t * data_file = Mat_Open("../data/test_data_w1_nofreq.mat", MAT_ACC_RDONLY);
     if (not bool(data_file)) {
-        throw "../data/test_data.mat can't be opened.";
+        throw "../data/test_data_w1_nofreq.mat can't be opened.";
     }
 
     matvar_t * tmp_mat = Mat_VarRead(data_file, "iter_fcts_m10dB_w1_q64_N60_0_n30");

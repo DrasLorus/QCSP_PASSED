@@ -4,7 +4,7 @@
 #include <bits/types/FILE.h>
 #include <catch2/catch.hpp>
 #include <cstdio>
-#include <matioCpp/matioCpp.h>
+#include <matio.h>
 #include <vector>
 
 using namespace QCSP::StandaloneDetector;
@@ -22,21 +22,23 @@ TEST_CASE("CScoreProcessor int16_t works for high snr inputs (q: 64, N: 60)", "[
     constexpr float in_scale_factor = float(1U << (In_W - In_I));
     constexpr float ot_scale_factor = 1. / float(1 << (Out_W - Out_I));
 
-    matioCpp::File parm_file("../data/parameters_20210903.mat", matioCpp::FileMode::ReadOnly);
+    mat_t * parm_file = Mat_Open("../data/parameters_20210903.mat", MAT_ACC_RDONLY);
+    if (not bool(parm_file)) {
+        throw "../data/parameters_20210903.mat can't be opened.";
+    }
 
-    matioCpp::Vector<double> PN64 = parm_file.read("PN64").asVector<double>();
-    vector<float>            pn(PN64.size());
+    matvar_t * tmp_pn = Mat_VarRead(parm_file, "PN64");
+    if (not bool(tmp_pn)) {
+        throw "PN64 can't be loaded.";
+    }
 
-    std::copy(PN64.begin(), PN64.end(), pn.begin());
-
-    if (PN64.size() != q) {
+    const vector<float> pn((double *) tmp_pn->data, (double *) tmp_pn->data + tmp_pn->dims[1]);
+    if (pn.size() != q) {
         throw "PN64 and q don't match.";
     }
 
-    if (unsigned(parm_file.read("n_frame").asElement<double>()) != N) {
-        throw "Fetched N and local N don't match.";
-    }
-
+    Mat_VarFree(tmp_pn);
+    Mat_Close(parm_file);
     mat_t * data_file = Mat_Open("../data/test_data_w1_nofreq.mat", MAT_ACC_RDONLY);
     if (not bool(data_file)) {
         throw "../data/test_data_w1_nofreq.mat can't be opened.";
@@ -98,18 +100,23 @@ TEST_CASE("CScoreProcessor int16_t works for low snr inputs (q: 64, N: 60)", "[s
     constexpr float in_scale_factor = float(1U << (In_W - In_I));
     constexpr float ot_scale_factor = 1. / float(1 << (Out_W - Out_I));
 
-    matioCpp::File parm_file("../data/parameters_20210903.mat", matioCpp::FileMode::ReadOnly);
+    mat_t * parm_file = Mat_Open("../data/parameters_20210903.mat", MAT_ACC_RDONLY);
+    if (not bool(parm_file)) {
+        throw "../data/parameters_20210903.mat can't be opened.";
+    }
 
-    matioCpp::Vector<double> PN64 = parm_file.read("PN64").asVector<double>();
-    const vector<float>      pn(PN64.begin(), PN64.end());
+    matvar_t * tmp_pn = Mat_VarRead(parm_file, "PN64");
+    if (not bool(tmp_pn)) {
+        throw "PN64 can't be loaded.";
+    }
 
-    if (PN64.size() != q) {
+    const vector<float> pn((double *) tmp_pn->data, (double *) tmp_pn->data + tmp_pn->dims[1]);
+    if (pn.size() != q) {
         throw "PN64 and q don't match.";
     }
 
-    if (unsigned(parm_file.read("n_frame").asElement<double>()) != N) {
-        throw "Fetched N and local N don't match.";
-    }
+    Mat_VarFree(tmp_pn);
+    Mat_Close(parm_file);
 
     mat_t * data_file = Mat_Open("../data/test_data_w1_nofreq.mat", MAT_ACC_RDONLY);
     if (not bool(data_file)) {

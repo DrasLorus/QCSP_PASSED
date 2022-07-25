@@ -9,9 +9,9 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../bin)
 set (CMAKE_EXPORT_COMPILE_COMMANDS true)
 
 project (
-  QCSP_LoneDetector
+  QCSP_PASSED
   LANGUAGES CXX
-  VERSION 0.2
+  VERSION 0.1
 )
 # this sets the project name
 
@@ -25,48 +25,13 @@ option (PREFER_STATIC_LIBRARY "prefer static libraries" ON)
 option (PROFILING "enable GProf profiling" OFF)
 option (DEBUG_SCORE "Dump score for debugging purpose" OFF)
 
-option (ENABLE_TESTING "enable unit-testing with Catch2" OFF)
+option (ENABLE_TESTING "enable unit-testing with Catch2" ON)
 
 # ##################################################################################################
 
-if (PREFER_STATIC_LIBRARY)
-  set (BLA_STATIC ON)
-endif ()
-
-find_package (BLAS REQUIRED)
-message (VERBOSE "BLAS Vendor: ${BLA_VENDOR}. Found: ${BLAS_LIBRARIES}")
-
 find_package (Boost REQUIRED COMPONENTS program_options)
 
-find_package (matioCpp QUIET)
-if (matioCpp_FOUND EQUAL 0)
-  set (matioCpp_VERSION 0.2.0)
-  message (STATUS "matioCpp not found. Version ${matioCpp_VERSION} will be build locally.")
-  file (
-    DOWNLOAD "https://github.com/dic-iit/matio-cpp/archive/refs/tags/v${matioCpp_VERSION}.zip"
-    "${CMAKE_BINARY_DIR}/matio-cpp-${matioCpp_VERSION}.zip"
-    EXPECTED_HASH SHA256=c102638834e14b923053fb4f0baf3f258ad2a055dc2bc88e658725c4a72789e1
-    TLS_VERIFY ON
-  )
-  if (CMAKE_VERSION VERSION_LESS 3.18)
-    message (STATUS "Please consider to switch to CMake 3.18+")
-    execute_process (
-      COMMAND "${CMAKE_COMMAND}" -E tar xvzf "${CMAKE_BINARY_DIR}/matio-cpp-${matioCpp_VERSION}.zip"
-      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-    )
-  else ()
-    file (
-      ARCHIVE_EXTRACT
-      INPUT
-      "${CMAKE_BINARY_DIR}/matio-cpp-${matioCpp_VERSION}.zip"
-      DESTINATION
-      "${CMAKE_BINARY_DIR}"
-    )
-  endif ()
-  add_subdirectory ("${CMAKE_BINARY_DIR}/matio-cpp-${matioCpp_VERSION}")
-else ()
-  message (STATUS "Found matioCpp: ${matioCpp_INCLUDE_DIRS}")
-endif ()
+find_library (matio matio REQUIRED)
 
 find_library (
   fftw
@@ -86,9 +51,6 @@ if (NOT Catch2_FOUND)
 endif ()
 
 find_package (OpenMP REQUIRED)
-if (OPENMP_FFT_GRID)
-  add_compile_definitions (OMP_FFT_P)
-endif ()
 
 find_package (Threads REQUIRED)
 
@@ -187,7 +149,7 @@ if (ENABLE_TESTING)
     l2norm_tests sources/CDetector/CScoreProcessor/CNorm/testing/CNorm_test.cpp
                  sources/CDetector/CScoreProcessor/CNorm/testing/CNorm_i16_test.cpp
   )
-  target_link_libraries (l2norm_tests PUBLIC l2norm catch_common_${PROJECT_NAME} matioCpp::matioCpp)
+  target_link_libraries (l2norm_tests PUBLIC l2norm catch_common_${PROJECT_NAME} matio)
 
   catch_discover_tests (l2norm_tests WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
@@ -197,7 +159,7 @@ if (ENABLE_TESTING)
     sources/CDetector/CScoreProcessor/CIterativeAdder/testing/CIterativeAdder_i16_test.cpp
   )
   target_link_libraries (
-    iterativeadder_tests PUBLIC iterativeadder catch_common_${PROJECT_NAME} matioCpp::matioCpp
+    iterativeadder_tests PUBLIC iterativeadder catch_common_${PROJECT_NAME} matio
   )
 
   catch_discover_tests (iterativeadder_tests WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -206,9 +168,7 @@ if (ENABLE_TESTING)
     corrabsmax_tests sources/CDetector/CScoreProcessor/CCorrAbsMax/testing/CCorrAbsMax_test.cpp
                      sources/CDetector/CScoreProcessor/CCorrAbsMax/testing/CCorrAbsMax_i16_test.cpp
   )
-  target_link_libraries (
-    corrabsmax_tests PUBLIC corrabsmax catch_common_${PROJECT_NAME} matioCpp::matioCpp
-  )
+  target_link_libraries (corrabsmax_tests PUBLIC corrabsmax catch_common_${PROJECT_NAME} matio)
 
   catch_discover_tests (corrabsmax_tests WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
@@ -217,9 +177,7 @@ if (ENABLE_TESTING)
     sources/CDetector/CScoreProcessor/CScoreAccumulator/testing/CScoreAccumulator_test.cpp
     sources/CDetector/CScoreProcessor/CScoreAccumulator/testing/CScoreAccumulator_i16_test.cpp
   )
-  target_link_libraries (
-    scoreaccu_tests PUBLIC scoreaccu catch_common_${PROJECT_NAME} matioCpp::matioCpp
-  )
+  target_link_libraries (scoreaccu_tests PUBLIC scoreaccu catch_common_${PROJECT_NAME} matio)
 
   catch_discover_tests (scoreaccu_tests WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
@@ -227,19 +185,15 @@ if (ENABLE_TESTING)
     scoreproc_tests sources/CDetector/CScoreProcessor/testing/CScoreProcessor_test.cpp
                     sources/CDetector/CScoreProcessor/testing/CScoreProcessor_i16_test.cpp
   )
-  target_link_libraries (
-    scoreproc_tests PUBLIC score_processor catch_common_${PROJECT_NAME} matioCpp::matioCpp
-  )
+  target_link_libraries (scoreproc_tests PUBLIC score_processor catch_common_${PROJECT_NAME} matio)
 
   catch_discover_tests (scoreproc_tests WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
   add_executable (
-    detector_tests sources/CDetector/testing/CDetector_high_test.cpp
-                   sources/CDetector/testing/CDetector_low_test.cpp
+    detector_tests sources/CDetector/testing/CDetector_w1_high_test.cpp
+                   sources/CDetector/testing/CDetector_w1_low_test.cpp
   )
-  target_link_libraries (
-    detector_tests PUBLIC detectors catch_common_${PROJECT_NAME} matioCpp::matioCpp
-  )
+  target_link_libraries (detector_tests PUBLIC detectors catch_common_${PROJECT_NAME} matio)
 
   catch_discover_tests (detector_tests WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 endif ()

@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <catch2/catch.hpp>
-#include <matioCpp/matioCpp.h>
+#include <matio.h>
 #include <vector>
 
 using namespace QCSP::StandaloneDetector;
@@ -14,17 +14,23 @@ TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for high snr inputs (q: 64, N: 60
     constexpr unsigned N       = 60;
     constexpr unsigned p_omega = 1;
 
-    matioCpp::File parm_file("../data/parameters_20210903.mat", matioCpp::FileMode::ReadOnly);
+    mat_t * parm_file = Mat_Open("../data/parameters_20210903.mat", MAT_ACC_RDONLY);
+    if (not bool(parm_file)) {
+        throw "../data/parameters_20210903.mat can't be opened.";
+    }
 
-    const matioCpp::Vector<double> PN64 = parm_file.read("PN64").asVector<double>();
-    const vector<TestType>         pn(PN64.begin(), PN64.end()); // Copy to convert to TestType
+    matvar_t * tmp_pn = Mat_VarRead(parm_file, "PN64");
+    if (not bool(tmp_pn)) {
+        throw "PN64 can't be loaded.";
+    }
+
+    const vector<float> pn((double *) tmp_pn->data, (double *) tmp_pn->data + tmp_pn->dims[1]);
     if (pn.size() != q) {
         throw "PN64 and q don't match.";
     }
 
-    if (unsigned(parm_file.read("n_frame").asElement<double>()) != N) {
-        throw "Fetched N and local N don't match.";
-    }
+    Mat_VarFree(tmp_pn);
+    Mat_Close(parm_file);
 
     mat_t * data_file = Mat_Open("../data/test_data_w1_nofreq.mat", MAT_ACC_RDONLY);
     if (not bool(data_file)) {
@@ -170,17 +176,23 @@ TEMPLATE_TEST_CASE("CDetectorSerial (raw) works for high snr inputs (q: 64, N: 6
     constexpr unsigned N       = 60;
     constexpr unsigned p_omega = 1;
 
-    matioCpp::File parm_file("../data/parameters_20210903.mat", matioCpp::FileMode::ReadOnly);
+    mat_t * parm_file = Mat_Open("../data/parameters_20210903.mat", MAT_ACC_RDONLY);
+    if (not bool(parm_file)) {
+        throw "../data/parameters_20210903.mat can't be opened.";
+    }
 
-    const matioCpp::Vector<double> PN64 = parm_file.read("PN64").asVector<double>();
-    const vector<TestType>         pn(PN64.begin(), PN64.end()); // Copy to convert to TestType
+    matvar_t * tmp_pn = Mat_VarRead(parm_file, "PN64");
+    if (not bool(tmp_pn)) {
+        throw "PN64 can't be loaded.";
+    }
+
+    const vector<float> pn((double *) tmp_pn->data, (double *) tmp_pn->data + tmp_pn->dims[1]);
     if (pn.size() != q) {
         throw "PN64 and q don't match.";
     }
 
-    if (unsigned(parm_file.read("n_frame").asElement<double>()) != N) {
-        throw "Fetched N and local N don't match.";
-    }
+    Mat_VarFree(tmp_pn);
+    Mat_Close(parm_file);
 
     mat_t * data_file = Mat_Open("../data/test_data_w1_nofreq.mat", MAT_ACC_RDONLY);
     if (not bool(data_file)) {
@@ -326,7 +338,7 @@ TEST_CASE("CDetectorSerial works for low snr inputs (q: 64, N: 60)", "[scoreproc
     constexpr unsigned q = 64;
     constexpr unsigned N = 60;
 
-    matioCpp::File parm_file("../data/parameters_20210903.mat", matioCpp::FileMode::ReadOnly);
+    matioCpp::File parm_file("../data/parameters_20210903.mat", MAT_ACC_RDONLY);
 
     matioCpp::Vector<double> PN64 = parm_file.read("PN64").asVector<double>();
     vector<float>            pn(PN64.size());

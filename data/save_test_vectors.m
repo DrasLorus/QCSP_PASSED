@@ -12,7 +12,7 @@ rng(seed)
 
 snr_tab  = [inf, -10];
 snr_str  = {'infdB', 'm10dB'};
-runs_tab = [10,   30];
+runs_tab = [1,   3];
 
     function stro = add_sqr(stri, squared)
         stro = cell(1, length(stri));
@@ -212,7 +212,10 @@ full_struct = combineStructs(...
         struct_l2_sqr_inf), ...
     struct_l2_sqr_m10);
 
-save(sprintf("test_data_w%i_pi_%i.mat", p_omega, step_denominator), '-v7.3', '-struct', 'full_struct')
-
+if exist('OCTAVE_VERSION', 'builtin')
+    save(sprintf("test_data_w%i_step%i_span%i.mat", p_omega, step_denominator, rotation_span / pi), '-v7', '-struct', 'full_struct')
+else
+    save(sprintf("test_data_w%i_step%i_span%i.mat", p_omega, step_denominator, rotation_span / pi), '-v7.3', '-struct', 'full_struct')
 end
 
+end

@@ -7,11 +7,8 @@ end
 
 corr_ip1 = corr_i_r + PN .* iterative_factors;
 
-if exist('OCTAVE_VERSION', 'builtin')
-	corr_i_r = correlation_shift_oct(corr_ip1);
-else
-	corr_i_r = circshift(corr_ip1, 1 ,2);
-end
+corr_i_r = circshift(corr_ip1, 1 ,2);
+
 
 if squared
     vec_new_max = max(corr_ip1 .* conj(corr_ip1), [], 2);

@@ -20,7 +20,7 @@ private:
     static constexpr uint32_t mask = q - 1;
 
     Tin_type fifos_max[N * q];   // linearized max fifos
-    Tin_type score_registers[q]; // aggegated score registers
+    Tin_type score_registers[q]; // aggregated score registers
 
     uint32_t counter;
 

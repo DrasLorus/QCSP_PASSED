@@ -4,7 +4,7 @@
 #include <catch2/catch.hpp>
 #include <cstdint>
 #include <cstdio>
-#include <matioCpp/matioCpp.h>
+#include <matio.h>
 #include <vector>
 
 using namespace QCSP::StandaloneDetector;

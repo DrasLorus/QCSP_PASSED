@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <catch2/catch.hpp>
 #include <cstdio>
-#include <matioCpp/matioCpp.h>
+#include <matio.h>
 #include <vector>
 
 using namespace QCSP::StandaloneDetector;

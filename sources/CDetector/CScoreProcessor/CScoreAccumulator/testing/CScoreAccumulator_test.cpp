@@ -2,28 +2,42 @@
 
 #include <algorithm>
 #include <catch2/catch.hpp>
-#include <matioCpp/matioCpp.h>
+#include <matio.h>
+#include <string>
 #include <vector>
 
 using namespace QCSP::StandaloneDetector;
+using std::string;
 using std::vector;
+
+namespace {
+template <typename T, typename data_type>
+vector<T> load_data_vector(mat_t * matfile, const string & varname) {
+    matvar_t * tmp_var = Mat_VarRead(matfile, varname.c_str());
+    if (not bool(tmp_var)) {
+        throw(varname + " can't be loaded.");
+    }
+
+    const vector<T> vect((data_type *) tmp_var->data, (data_type *) tmp_var->data + tmp_var->dims[0]);
+
+    Mat_VarFree(tmp_var);
+
+    return vect;
+}
+} // namespace
 
 TEST_CASE("CScoreAccumulator works for high snr inputs (q: 64, N: 60)", "[scoreaccu][high]") {
 
     constexpr unsigned q = 64;
     constexpr unsigned N = 60;
 
-    matioCpp::File data_file("../data/test_data_w1_nofreq.mat", matioCpp::FileMode::ReadOnly);
+    mat_t * data_file = Mat_Open("../data/test_data_w1_nofreq.mat", MAT_ACC_RDONLY);
 
-    const matioCpp::Vector<float> cabs_in = data_file.read("cabs_max_l2_infdB_w1_q64_N60_0_n10").asVector<float>();
-    if (cabs_in.size() == 0 || not cabs_in.isValid()) {
-        throw "cabs_max_l2_infdB_w1_q64_N60_0_n10 can't be loaded.";
-    }
+    const vector<float> cabs_in = load_data_vector<float, float>(data_file, "cabs_max_l2_infdB_w1_q64_N60_0_n10");
 
-    const matioCpp::Vector<float> score_out = data_file.read("score_l2_infdB_w1_q64_N60_0_n10").asVector<float>();
-    if (score_out.size() == 0 || not score_out.isValid()) {
-        throw "score_l2_infdB_w1_q64_N60_0_n10 can't be loaded.";
-    }
+    const vector<float> score_out = load_data_vector<float, float>(data_file, "score_l2_infdB_w1_q64_N60_0_n10");
+
+    Mat_Close(data_file);
 
     CScoreAccumulator<N, q> * proc = new CScoreAccumulator<N, q>();
 
@@ -47,17 +61,13 @@ TEST_CASE("CScoreAccumulator works for low snr inputs (q: 64, N: 60)", "[scoreac
     constexpr unsigned q = 64;
     constexpr unsigned N = 60;
 
-    matioCpp::File data_file("../data/test_data_w1_nofreq.mat", matioCpp::FileMode::ReadOnly);
+    mat_t * data_file = Mat_Open("../data/test_data_w1_nofreq.mat", MAT_ACC_RDONLY);
 
-    const matioCpp::Vector<float> cabs_in = data_file.read("cabs_max_l2_m10dB_w1_q64_N60_0_n30").asVector<float>();
-    if (cabs_in.size() == 0 || not cabs_in.isValid()) {
-        throw "cabs_max_l2_m10dB_w1_q64_N60_0_n30 can't be loaded.";
-    }
+    const vector<float> cabs_in = load_data_vector<float, float>(data_file, "cabs_max_l2_infdB_w1_q64_N60_0_n10");
 
-    const matioCpp::Vector<float> score_out = data_file.read("score_l2_m10dB_w1_q64_N60_0_n30").asVector<float>();
-    if (score_out.size() == 0 || not score_out.isValid()) {
-        throw "score_l2_m10dB_w1_q64_N60_0_n30 can't be loaded.";
-    }
+    const vector<float> score_out = load_data_vector<float, float>(data_file, "score_l2_infdB_w1_q64_N60_0_n10");
+
+    Mat_Close(data_file);
 
     CScoreAccumulator<N, q> * proc = new CScoreAccumulator<N, q>();
 

@@ -190,8 +190,10 @@ if (ENABLE_TESTING)
   catch_discover_tests (scoreproc_tests WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
   add_executable (
-    detector_tests sources/CDetector/testing/CDetector_w1_high_test.cpp
-                   sources/CDetector/testing/CDetector_w1_low_test.cpp
+    detector_tests
+    sources/CDetector/testing/CDetector_w1_high_test.cpp
+    sources/CDetector/testing/CDetector_w1_low_test.cpp
+    sources/CDetector/testing/CDetector_w34_pi_8_low_test.cpp
   )
   target_link_libraries (detector_tests PUBLIC detectors catch_common_${PROJECT_NAME} matio)
 

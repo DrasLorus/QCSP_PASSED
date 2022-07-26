@@ -6,15 +6,20 @@ N = length(ovmod);
 
 % snr = 10;
 
+if size(pn, 1) == 1
+    pn = reshape(pn, [], 1);
+end
+
 sigma   = sqrt(10^(-snr/10));
 sigma_c = sigma / sqrt(2);
 
+frame_length = N * q;
 
 codewords = randi([0, q - 1], runs, N);
-frames    = zeros(runs, N * q);
+frames    = zeros(frame_length, runs);
 for run = 1 : runs
     for symbol = 1 : N
-        frames(run, (symbol - 1) * q + 1 : symbol * q) = circshift(pn, -codewords(run, symbol)) .* ovmod(symbol);
+        frames((symbol - 1) * q + 1 : symbol * q, run) = circshift(pn, -codewords(run, symbol)) .* ovmod(symbol);
     end
 end
 
@@ -22,17 +27,17 @@ symbol_rot = -rotation_span + 2 * rotation_span * rand(1, runs);
 
 delta = randi([0, q - 1], 1, runs);
 
-deltas    = delta;
-rotations = symbol_rot;
+deltas    = single(reshape(delta, runs, 1));
+rotations = single(reshape(symbol_rot, runs, 1));
 
 run_length = 5 * N * q;
-seq        = zeros(1,  run_length * runs);
+seq        = zeros(run_length * runs, 1);
 for n_run = 1 : runs
     idx_seq = (n_run - 1) * run_length + 1 : n_run * run_length;
-    seq(idx_seq) = [ zeros(1, 2 * N * q + delta(n_run)) frames(n_run , :).*exp(symbol_rot(n_run) * 1i / q *...
-        (1:size(frames, 2))) zeros(1, 2 * N * q - delta(n_run))];
+    seq(idx_seq) = [zeros(2 * N * q + delta(n_run), 1) ; frames(:, n_run) .* exp(symbol_rot(n_run) * 1i / q *...
+        reshape(1 : frame_length, frame_length, 1)) ; zeros(2 * N * q - delta(n_run), 1)];
     % seq = seq
     %seq = seq + sigma * (randn(1, length(seq)));
 end
 
-noisy_seq = seq + sigma_c * (randn(1, length(seq)) + 1i * randn(1, length(seq)));
+noisy_seq = single(seq + sigma_c * (randn(size(seq)) + 1i * randn(size(seq))));

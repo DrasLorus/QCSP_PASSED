@@ -4,9 +4,9 @@ function [score, iter_fcts, cabs_max, norms_l2] = compute_ts_score(p_omega, step
 
 clear corr_abs_max
 
-q    = length(PN);
+q = length(PN);
 
-rot_step = min(pi / step_denominator, 4 * step_denominator);
+% rot_step = min(pi / step_denominator, 4 * step_denominator);
 
 iter_fcts = single(zeros(length(noisy_seq), p_omega));
 cabs_max  = single(zeros(length(noisy_seq), p_omega));

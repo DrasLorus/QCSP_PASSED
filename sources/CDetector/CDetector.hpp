@@ -20,7 +20,8 @@ struct DetectionState {
 
     uint64_t chip_since_last_det;
     uint64_t chip_from_max;
-    TFreq    frequency_offset;
+    TFreq    frequency_offset; // The frequency offset corresponding to the maximum score
+    uint32_t frequency_index;  // The index of the frequency offset in the frequency array
 };
 
 template <unsigned TFrameSize, unsigned Tq, unsigned Tp_omega, typename TIn_Type = float, bool normed = true>
@@ -69,25 +70,30 @@ private:
         const TIn_Type current_score          = state->max_score;
         const uint64_t current_idx            = state->chip_from_max;
         const TIn_Type current_cfos           = state->frequency_offset;
+        const uint32_t current_cfid           = state->frequency_index;
         const uint64_t current_count          = state->chip_since_last_det + 1;
 
         const TIn_Type * max_score = std::max_element(scores, scores + p_omega);
 
-        const bool     higher_score   = current_score < *max_score;
-        const bool     over_threshold = *max_score > _threshold;
-        const bool     max_found      = current_count >= window_size;
-        const bool     relaxed        = current_count >= (window_size * 2) or current_count == 0;
-        const TIn_Type local_cfos     = frequency_errors[size_t(max_score - scores)];
+        const bool higher_score   = current_score < *max_score;
+        const bool over_threshold = *max_score > _threshold;
+        const bool max_found      = current_count >= window_size;
+        const bool relaxed        = current_count >= (window_size * 2) or current_count == 0;
+
+        const uint32_t local_cfid = size_t(max_score - scores);
+        const TIn_Type local_cfos = frequency_errors[local_cfid];
 
         const bool fetch_new_values = not(frame_already_detected and not(relaxed)) or (higher_score and not(max_found) and not(relaxed));
 
         const TIn_Type new_max_score = TIn_Type(fetch_new_values) * *max_score + TIn_Type(not fetch_new_values) * current_score;
         const TIn_Type new_cfos      = TIn_Type(fetch_new_values) * local_cfos + TIn_Type(not fetch_new_values) * current_cfos;
+        const TIn_Type new_cfid      = TIn_Type(fetch_new_values) * local_cfid + TIn_Type(not fetch_new_values) * current_cfid;
         const uint64_t new_count     = current_count % (window_size * 2);
 
         memcpy(state->scores, scores, sizeof(TIn_Type) * p_omega);
         state->max_score           = new_max_score;
         state->frequency_offset    = new_cfos;
+        state->frequency_index     = new_cfid;
         state->frame_detected      = (frame_already_detected and not(relaxed)) or over_threshold;
         state->max_found           = max_found and not(relaxed) and frame_already_detected;
         state->chip_since_last_det = uint64_t(frame_already_detected) * new_count;
@@ -101,6 +107,8 @@ public:
     TIn_Type symbol_rotation() const noexcept { return std::min(TIn_Type(pi) / TIn_Type(den_step), TIn_Type(4. * double(den_step))); }
     TIn_Type rotation_step() const noexcept { return symbol_rotation() / TIn_Type(q); }
 
+    const std::vector<TIn_Type> & primary_rotation() const noexcept { return rotation_vector; }
+
     TIn_Type frequency_error(unsigned n) const {
         if (n >= p_omega) {
             throw std::out_of_range("n must be below p_omega (= " + std::to_string(p_omega) + ")");
@@ -112,10 +120,11 @@ public:
         TIn_Type scores[p_omega];
 
         for (unsigned u = 0; u < p_omega; u++) {
-            const size_t current_counter = rotation_counters[u] << 1;
+            const size_t current_counter = rotation_counters[u];
+            const size_t local_counter   = current_counter << 1;
 
-            const TIn_Type re_rotation = rotation_vector[current_counter];
-            const TIn_Type im_rotation = rotation_vector[current_counter + 1];
+            const TIn_Type re_rotation = rotation_vector[local_counter];
+            const TIn_Type im_rotation = rotation_vector[local_counter + 1];
 
             const TIn_Type local_re_in = re_in * re_rotation - im_in * im_rotation;
             const TIn_Type local_im_in = re_in * im_rotation + im_in * re_rotation;
@@ -133,10 +142,11 @@ public:
         TIn_Type scores[p_omega];
 
         for (unsigned u = 0; u < p_omega; u++) {
-            const size_t current_counter = rotation_counters[u] << 1;
+            const size_t current_counter = rotation_counters[u];
+            const size_t local_counter   = current_counter << 1;
 
-            const TIn_Type re_rotation = rotation_vector[current_counter];
-            const TIn_Type im_rotation = rotation_vector[current_counter + 1];
+            const TIn_Type re_rotation = rotation_vector[local_counter];
+            const TIn_Type im_rotation = rotation_vector[local_counter + 1];
 
             const TIn_Type local_re_in = re_in * re_rotation - im_in * im_rotation;
             const TIn_Type local_im_in = re_in * im_rotation + im_in * re_rotation;
@@ -161,22 +171,22 @@ public:
         memset(rotation_counters, 0, p_omega * sizeof(size_t));
 
         for (unsigned u = 0; u < p_omega; u++) {
-            frequency_errors[u] = TIn_Type(double(rotation_step()) / two_pi * double(int(u) - int(p_omega >> 1)));
+            frequency_errors[u] = TIn_Type((double(u) - double(p_omega - 1) / 2.) / double(step_denominator * q * 2));
         }
 
         std::vector<int> spanf(p_omega);
         // spanf = @(p_omega) -(p_omega - 1) : 2 : (p_omega - 1)
         const int span_root = -int(p_omega - 1);
         for (unsigned u = 0; u < p_omega; u++) {
-            spanf[u] = span_root + int(u << 1U);
+            spanf[u] = span_root + int(u << 1);
         }
 
         // rotation_vector = @(p_omega, den_step, q) exp(1i * pi / (q * den_step) .* (0 : (rotations_size - 1)))
         const double common_value = rotation_step();
         for (int i = 0; i < int(rotation_size); i++) {
             const int idx            = i << 1;
-            rotation_vector[idx]     = (TIn_Type) std::cos(double(i) * common_value);
-            rotation_vector[idx + 1] = (TIn_Type) std::sin(double(i) * common_value);
+            rotation_vector[idx]     = (TIn_Type) cos(double(i) * common_value);
+            rotation_vector[idx + 1] = (TIn_Type) sin(double(i) * common_value);
         }
 
         for (int u = 0; u < int(p_omega >> 1); u++) {
@@ -185,6 +195,16 @@ public:
         for (unsigned u = (p_omega >> 1); u < p_omega; u++) {
             rotation_increments[u] = spanf[u];
         }
+
+        // * NOTE: Uncomment following lines to monitor spanf and rotation_increments
+        // for (unsigned u = 0; u < p_omega; u++) {
+        //     printf("%3d ", spanf[u]);
+        // }
+        // printf("\n");
+        // for (unsigned u = 0; u < p_omega; u++) {
+        //     printf("%3lu ", rotation_increments[u]);
+        // }
+        // printf("\n\n");
     }
 
     virtual ~CDetectorSerial() = default;

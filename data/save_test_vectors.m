@@ -1,4 +1,4 @@
-function save_test_vectors(PN, best_N, rotation_span, p_omega, step_denominator, seed)
+function filename = save_test_vectors(PN, best_N, rotation_span, p_omega, step_denominator, seed)
 %SAVE_TEST_VECTORS Generate aset of test vectors and saves it in an HDF5 matfile.
 %   You must provide a PN sequence, a overmodulation sequence `best_N`, the rotation span (symbol 
 %   rotation is in [-rotation_span/2, rotation_span/2[), the number of frequency hypothesis, the
@@ -12,7 +12,7 @@ rng(seed)
 
 snr_tab  = [inf, -10];
 snr_str  = {'infdB', 'm10dB'};
-runs_tab = [1,   3];
+runs_tab = [10,   30];
 
     function stro = add_sqr(stri, squared)
         stro = cell(1, length(stri));
@@ -39,8 +39,9 @@ runs_tab = [1,   3];
     function stro = add_tail(stri, N, q, p_omega, rotation_span, i)
         stro = cell(1, length(stri));
         for idx = 1 : length(stri)
-            stro{idx} = [stri{idx}, sprintf('_%s_w%i_q%i_N%d_%dpi_n%i', ...
-                snr_str{i}, p_omega, q, N, rotation_span / pi, runs_tab(i))];
+            [ratD, ratN] = rat(rotation_span / pi);
+            stro{idx} = [stri{idx}, sprintf('_%s_w%i_q%i_N%i_%dpi_%d_n%i', ...
+                snr_str{i}, p_omega, q, N, ratD, ratN, runs_tab(i))];
         end
     end
 
@@ -61,7 +62,7 @@ rng(seed)
     generate_noisy_sequence(runs_tab(i), PN, best_N, snr_tab(i), rotation_span);
 
 local_fields = add_tail(fieldsin, N, q, p_omega, rotation_span, i);
-local_data   = {noisy_seq, deltas, rotations};
+local_data   = {single(noisy_seq), single(deltas), single(rotations)};
 
 init_s = [local_fields; local_data];
 
@@ -212,10 +213,12 @@ full_struct = combineStructs(...
         struct_l2_sqr_inf), ...
     struct_l2_sqr_m10);
 
+filename = sprintf("test_data_w%i_step%i_span%3.1f.mat", p_omega, step_denominator, rotation_span / pi);
+
 if exist('OCTAVE_VERSION', 'builtin')
-    save(sprintf("test_data_w%i_step%i_span%i.mat", p_omega, step_denominator, rotation_span / pi), '-v7', '-struct', 'full_struct')
+    save(filename, '-v7', '-struct', 'full_struct')
 else
-    save(sprintf("test_data_w%i_step%i_span%i.mat", p_omega, step_denominator, rotation_span / pi), '-v7.3', '-struct', 'full_struct')
+    save(filename, '-v7.3', '-struct', 'full_struct')
 end
 
 end

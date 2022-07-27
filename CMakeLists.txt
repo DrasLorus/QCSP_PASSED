@@ -1,4 +1,8 @@
-cmake_minimum_required (VERSION 3.18.0 FATAL_ERROR)
+cmake_minimum_required (VERSION 3.16.0 FATAL_ERROR)
+if (CMAKE_VERSION VERSION_LESS 3.18.0)
+  message (WARNING "You are using an outdated version of cmake (typically used on Ubuntu 20.04). You may consider using an updated CMake.")
+endif ()
+
 # setting this is required
 
 set (CMAKE_CXX_STANDARD 14)
@@ -27,32 +31,49 @@ option (DEBUG_SCORE "Dump score for debugging purpose" OFF)
 
 option (ENABLE_TESTING "enable unit-testing with Catch2" ON)
 
+option (ENABLE_SYSTEM_CATCH2 "Use system-provided Catch2 library" ON)
+
 # ##################################################################################################
+
+include(FetchContent)
 
 find_package (Boost REQUIRED COMPONENTS program_options)
 
 find_library (matio matio REQUIRED)
+find_file (matio-header matio.h REQUIRED)
 
-find_library (
-  fftw
-  NAMES fftw fftw3
-  HINTS "/usr/local/lib" "/usr/local" REQUIRED
-)
+## Currently unused dependencies
 
-find_library (
-  fftwf
-  NAMES fftwf fftw3f
-  HINTS "/usr/local/lib" "/usr/local" REQUIRED
-)
+# find_library (
+#   fftw
+#   NAMES fftw fftw3
+#   HINTS "/usr/local/lib" "/usr/local" REQUIRED
+# )
+
+# find_library (
+#   fftwf
+#   NAMES fftwf fftw3f
+#   HINTS "/usr/local/lib" "/usr/local" REQUIRED
+# )
+
+# find_package (OpenMP REQUIRED)
+
+# find_package (Threads REQUIRED)
 
 find_package (Catch2 QUIET)
-if (NOT Catch2_FOUND)
-  message (WARNING "Catch2 not found, unit tests and checking are disabled.")
+if (((NOT Catch2_FOUND) OR (Catch2_VERSION VERSION_LESS 2.13)) AND ENABLE_TESTING)
+  if (ENABLE_SYSTEM_CATCH2)
+    message (FATAL_ERROR "Catch2 not found, and you asked to use a system provided version. Please install Catch v2.x (x > 13)")
+  else ()
+    FetchContent_Declare(
+      Catch219
+      URL      https://github.com/catchorg/Catch2/archive/refs/tags/v2.13.9.tar.gz
+      URL_HASH SHA256=06dbc7620e3b96c2b69d57bf337028bf245a211b3cddb843835bfe258f427a52
+    )
+    FetchContent_MakeAvailable(Catch219)
+    list(APPEND CMAKE_MODULE_PATH "${catch219_SOURCE_DIR}/contrib")
+  endif ()
 endif ()
-
-find_package (OpenMP REQUIRED)
-
-find_package (Threads REQUIRED)
 
 if (PROFILING)
   add_compile_definitions (WITHGPERFTOOLS)

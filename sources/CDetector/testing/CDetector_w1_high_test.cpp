@@ -8,7 +8,7 @@
 using namespace QCSP::StandaloneDetector;
 using std::vector;
 
-TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for high snr inputs (q: 64, N: 60, p_omega: 1)", "[detector][high][l2]", float, double) {
+TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for high snr inputs (q: 64, N: 60, w: 1)", "[detector][high][l2]", float, double) {
 
     constexpr unsigned q       = 64;
     constexpr unsigned N       = 60;
@@ -170,7 +170,7 @@ TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for high snr inputs (q: 64, N: 60
     delete proc;
 }
 
-TEMPLATE_TEST_CASE("CDetectorSerial (raw) works for high snr inputs (q: 64, N: 60, p_omega: 1)", "[detector][high][raw]", float, double) {
+TEMPLATE_TEST_CASE("CDetectorSerial (raw) works for high snr inputs (q: 64, N: 60, w: 1)", "[detector][high][raw]", float, double) {
 
     constexpr unsigned q       = 64;
     constexpr unsigned N       = 60;

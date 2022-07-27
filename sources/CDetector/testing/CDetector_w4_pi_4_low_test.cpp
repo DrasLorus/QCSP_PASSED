@@ -47,12 +47,12 @@ vector<vector<T>> load_data_matrix(mat_t * matfile, const string & varname) {
 }
 } // namespace
 
-TEST_CASE("CDetectorSerial (L2, float) works for low snr inputs (q: 64, N: 60, w: 34, d: 8)", "[detector][low][l2][w34]") {
+TEST_CASE("CDetectorSerial (L2, float) works for low snr inputs (q: 64, N: 60, w: 4, d: 4)", "[detector][low][l2][w4]") {
 
     constexpr unsigned q                = 64;
     constexpr unsigned N                = 60;
-    constexpr unsigned p_omega          = 34;
-    constexpr unsigned step_denominator = 8;
+    constexpr unsigned p_omega          = 4;
+    constexpr unsigned step_denominator = 4;
 
     mat_t * parm_file = Mat_Open("../data/parameters_20210903.mat", MAT_ACC_RDONLY);
     if (not bool(parm_file)) {
@@ -72,14 +72,14 @@ TEST_CASE("CDetectorSerial (L2, float) works for low snr inputs (q: 64, N: 60, w
     Mat_VarFree(tmp_pn);
     Mat_Close(parm_file);
 
-    mat_t * data_file = Mat_Open("../data/test_data_w34_step8_span2.0.mat", MAT_ACC_RDONLY);
+    mat_t * data_file = Mat_Open("../data/test_data_w4_step4_span0.5.mat", MAT_ACC_RDONLY);
     if (not bool(data_file)) {
-        throw "../data/test_data_w34_step8_span2.0.mat can't be opened.";
+        throw "../data/test_data_w4_step4_span0.5.mat can't be opened.";
     }
 
-    matvar_t * tmp_mat = Mat_VarRead(data_file, "data_input_m10dB_w34_q64_N60_2pi_1_n30");
+    matvar_t * tmp_mat = Mat_VarRead(data_file, "data_input_m10dB_w4_q64_N60_1pi_2_n30");
     if (not bool(tmp_mat)) {
-        throw "data_input_m10dB_w34_q64_N60_2pi_1_n30 can't be loaded.";
+        throw "data_input_m10dB_w4_q64_N60_1pi_2_n30 can't be loaded.";
     }
 
     mat_complex_split_t * cpx_ptr = (mat_complex_split_t *) tmp_mat->data;
@@ -93,7 +93,7 @@ TEST_CASE("CDetectorSerial (L2, float) works for low snr inputs (q: 64, N: 60, w
 
     Mat_VarFree(tmp_mat);
 
-    const vector<float> rotations = load_data_vector<float, float>(data_file, "rotations_m10dB_w34_q64_N60_2pi_1_n30");
+    const vector<float> rotations = load_data_vector<float, float>(data_file, "rotations_m10dB_w4_q64_N60_1pi_2_n30");
 
     constexpr unsigned run_size = N * q * 5;
 
@@ -107,7 +107,7 @@ TEST_CASE("CDetectorSerial (L2, float) works for low snr inputs (q: 64, N: 60, w
         constexpr float threshold = 140.5f;
 
         const vector<vector<float>> scores_out
-            = load_data_matrix<float, float>(data_file, "score_sqrt_l2_m10dB_w34_q64_N60_2pi_1_n30");
+            = load_data_matrix<float, float>(data_file, "score_sqrt_l2_m10dB_w4_q64_N60_1pi_2_n30");
 
         vector<std::pair<int64_t, int64_t>> det_idxs(30, {0, 0});
         vector<std::pair<int64_t, int64_t>> max_idxs(30, {0, 0});
@@ -245,7 +245,7 @@ TEST_CASE("CDetectorSerial (L2, float) works for low snr inputs (q: 64, N: 60, w
         constexpr float threshold = float(350.5);
 
         const vector<vector<float>> scores_out
-            = load_data_matrix<float, float>(data_file, "score_sqr_l2_m10dB_w34_q64_N60_2pi_1_n30");
+            = load_data_matrix<float, float>(data_file, "score_sqr_l2_m10dB_w4_q64_N60_1pi_2_n30");
 
         vector<std::pair<int64_t, int64_t>> det_idxs(30, {0, 0});
         vector<std::pair<int64_t, int64_t>> max_idxs(30, {0, 0});
@@ -380,12 +380,12 @@ TEST_CASE("CDetectorSerial (L2, float) works for low snr inputs (q: 64, N: 60, w
     Mat_Close(data_file);
 }
 
-TEST_CASE("CDetectorSerial (Raw, float) works for low snr inputs (q: 64, N: 60, w: 34, d: 8)", "[detector][low][raw][w34]") {
+TEST_CASE("CDetectorSerial (Raw, float) works for low snr inputs (q: 64, N: 60, w: 4, d: 4)", "[detector][low][raw][w4]") {
 
     constexpr unsigned q                = 64;
     constexpr unsigned N                = 60;
-    constexpr unsigned p_omega          = 34;
-    constexpr unsigned step_denominator = 8;
+    constexpr unsigned p_omega          = 4;
+    constexpr unsigned step_denominator = 4;
 
     mat_t * parm_file = Mat_Open("../data/parameters_20210903.mat", MAT_ACC_RDONLY);
     if (not bool(parm_file)) {
@@ -405,14 +405,14 @@ TEST_CASE("CDetectorSerial (Raw, float) works for low snr inputs (q: 64, N: 60, 
     Mat_VarFree(tmp_pn);
     Mat_Close(parm_file);
 
-    mat_t * data_file = Mat_Open("../data/test_data_w34_step8_span2.0.mat", MAT_ACC_RDONLY);
+    mat_t * data_file = Mat_Open("../data/test_data_w4_step4_span0.5.mat", MAT_ACC_RDONLY);
     if (not bool(data_file)) {
-        throw "../data/test_data_w34_step8_span2.0.mat can't be opened.";
+        throw "../data/test_data_w4_step4_span0.5.mat can't be opened.";
     }
 
-    matvar_t * tmp_mat = Mat_VarRead(data_file, "data_input_m10dB_w34_q64_N60_2pi_1_n30");
+    matvar_t * tmp_mat = Mat_VarRead(data_file, "data_input_m10dB_w4_q64_N60_1pi_2_n30");
     if (not bool(tmp_mat)) {
-        throw "data_input_m10dB_w34_q64_N60_2pi_1_n30 can't be loaded.";
+        throw "data_input_m10dB_w4_q64_N60_1pi_2_n30 can't be loaded.";
     }
 
     mat_complex_split_t * cpx_ptr = (mat_complex_split_t *) tmp_mat->data;
@@ -426,7 +426,7 @@ TEST_CASE("CDetectorSerial (Raw, float) works for low snr inputs (q: 64, N: 60, 
 
     Mat_VarFree(tmp_mat);
 
-    const vector<float> rotations = load_data_vector<float, float>(data_file, "rotations_m10dB_w34_q64_N60_2pi_1_n30");
+    const vector<float> rotations = load_data_vector<float, float>(data_file, "rotations_m10dB_w4_q64_N60_1pi_2_n30");
 
     constexpr unsigned run_size = N * q * 5;
 
@@ -440,7 +440,7 @@ TEST_CASE("CDetectorSerial (Raw, float) works for low snr inputs (q: 64, N: 60, 
         constexpr float threshold = 3600.5f;
 
         const vector<vector<float>> scores_out
-            = load_data_matrix<float, float>(data_file, "score_sqrt_raw_m10dB_w34_q64_N60_2pi_1_n30");
+            = load_data_matrix<float, float>(data_file, "score_sqrt_raw_m10dB_w4_q64_N60_1pi_2_n30");
 
         vector<std::pair<int64_t, int64_t>> det_idxs(30, {0, 0});
         vector<std::pair<int64_t, int64_t>> max_idxs(30, {0, 0});
@@ -577,7 +577,7 @@ TEST_CASE("CDetectorSerial (Raw, float) works for low snr inputs (q: 64, N: 60, 
         constexpr float threshold = 220500.f;
 
         const vector<vector<float>> scores_out
-            = load_data_matrix<float, float>(data_file, "score_sqr_raw_m10dB_w34_q64_N60_2pi_1_n30");
+            = load_data_matrix<float, float>(data_file, "score_sqr_raw_m10dB_w4_q64_N60_1pi_2_n30");
 
         vector<std::pair<int64_t, int64_t>> det_idxs(30, {0, 0});
         vector<std::pair<int64_t, int64_t>> max_idxs(30, {0, 0});

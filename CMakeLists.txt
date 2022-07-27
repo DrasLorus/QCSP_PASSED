@@ -193,6 +193,7 @@ if (ENABLE_TESTING)
     detector_tests
     sources/CDetector/testing/CDetector_w1_high_test.cpp
     sources/CDetector/testing/CDetector_w1_low_test.cpp
+    sources/CDetector/testing/CDetector_w4_pi_4_low_test.cpp
     sources/CDetector/testing/CDetector_w34_pi_8_low_test.cpp
   )
   target_link_libraries (detector_tests PUBLIC detectors catch_common_${PROJECT_NAME} matio)

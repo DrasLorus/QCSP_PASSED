@@ -1,9 +1,53 @@
 function filename = save_test_vectors(PN, best_N, rotation_span, p_omega, step_denominator, seed)
-%SAVE_TEST_VECTORS Generate aset of test vectors and saves it in an HDF5 matfile.
+%SAVE_TEST_VECTORS Generate a set of test vectors and saves it in a matfile.
 %   You must provide a PN sequence, a overmodulation sequence `best_N`, the rotation span (symbol 
 %   rotation is in [-rotation_span/2, rotation_span/2[), the number of frequency hypothesis, the
 %   step_denominator (maximum of error is pi/step_denominator) and a seed for the randomness. Be
 %   aware that files grow with the length of PN and best_N, and with p_omega.
+%
+%   Usage:
+%       fn = SAVE_TEST_VECTORS(PN, best_N, rotation_span, p_omega, step_denominator, seed)
+%
+%   Example:
+%       fn = SAVE_TEST_VECTORS(PN, best_N, 2 * pi, 4, 4, 0) produce a file
+%       "test_data_w4_step4_span0.5.mat" that contains:
+%              cabs_max_sqr_l2_infdB_w4_q64_N60_1pi_2_n10: [192000x4 single]                                                                                               
+%              cabs_max_sqr_l2_m10dB_w4_q64_N60_1pi_2_n30: [576000x4 single]                                                                                               
+%             cabs_max_sqr_raw_infdB_w4_q64_N60_1pi_2_n10: [192000x4 single]                                                                                               
+%             cabs_max_sqr_raw_m10dB_w4_q64_N60_1pi_2_n30: [576000x4 single]                                                                                               
+%             cabs_max_sqrt_l2_infdB_w4_q64_N60_1pi_2_n10: [192000x4 single]                                                                                               
+%             cabs_max_sqrt_l2_m10dB_w4_q64_N60_1pi_2_n30: [576000x4 single]                                                                                               
+%            cabs_max_sqrt_raw_infdB_w4_q64_N60_1pi_2_n10: [192000x4 single]                                                                                               
+%            cabs_max_sqrt_raw_m10dB_w4_q64_N60_1pi_2_n30: [576000x4 single]                                                                                               
+%                   data_input_infdB_w4_q64_N60_1pi_2_n10: [192000x1 single]                                                                                               
+%                   data_input_m10dB_w4_q64_N60_1pi_2_n30: [576000x1 single]                                                                                               
+%                       deltas_infdB_w4_q64_N60_1pi_2_n10: [10x1     single]                                                                                               
+%                       deltas_m10dB_w4_q64_N60_1pi_2_n30: [30x1     single]                                                                                               
+%             iter_fcts_sqr_l2_infdB_w4_q64_N60_1pi_2_n10: [192000x4 single]                                                                                               
+%             iter_fcts_sqr_l2_m10dB_w4_q64_N60_1pi_2_n30: [576000x4 single]                                                                                               
+%            iter_fcts_sqr_raw_infdB_w4_q64_N60_1pi_2_n10: [192000x4 single]                                                                                               
+%            iter_fcts_sqr_raw_m10dB_w4_q64_N60_1pi_2_n30: [576000x4 single]                                                                                               
+%            iter_fcts_sqrt_l2_infdB_w4_q64_N60_1pi_2_n10: [192000x4 single]                                                                                               
+%            iter_fcts_sqrt_l2_m10dB_w4_q64_N60_1pi_2_n30: [576000x4 single]                                                                                               
+%           iter_fcts_sqrt_raw_infdB_w4_q64_N60_1pi_2_n10: [192000x4 single]                                                                                               
+%           iter_fcts_sqrt_raw_m10dB_w4_q64_N60_1pi_2_n30: [576000x4 single]                                                                                               
+%                 norms_sqr_l2_infdB_w4_q64_N60_1pi_2_n10: [192000x1 single]                                                                                               
+%                 norms_sqr_l2_m10dB_w4_q64_N60_1pi_2_n30: [576000x1 single]                                                                                               
+%                norms_sqrt_l2_infdB_w4_q64_N60_1pi_2_n10: [192000x1 single]                                                                                               
+%                norms_sqrt_l2_m10dB_w4_q64_N60_1pi_2_n30: [576000x1 single]                                                                                               
+%                    rotations_infdB_w4_q64_N60_1pi_2_n10: [10x1     single]                                                                                               
+%                    rotations_m10dB_w4_q64_N60_1pi_2_n30: [30x1     single]                                                                                               
+%                 score_sqr_l2_infdB_w4_q64_N60_1pi_2_n10: [192000x4 single]                                                                                               
+%                 score_sqr_l2_m10dB_w4_q64_N60_1pi_2_n30: [576000x4 single]                                                                                               
+%                score_sqr_raw_infdB_w4_q64_N60_1pi_2_n10: [192000x4 single]                                                                                               
+%                score_sqr_raw_m10dB_w4_q64_N60_1pi_2_n30: [576000x4 single]                                                                                               
+%                score_sqrt_l2_infdB_w4_q64_N60_1pi_2_n10: [192000x4 single]                                                                                               
+%                score_sqrt_l2_m10dB_w4_q64_N60_1pi_2_n30: [576000x4 single]                                                                                               
+%               score_sqrt_raw_infdB_w4_q64_N60_1pi_2_n10: [192000x4 single]                                                                                               
+%               score_sqrt_raw_m10dB_w4_q64_N60_1pi_2_n30: [576000x4 single]
+%       and that can be loaded either using load or matfile (if supported).
+%
+%   See also LOAD, MATFILE
 
 q = length(PN);
 N = length(best_N);

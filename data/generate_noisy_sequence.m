@@ -1,4 +1,23 @@
 function [noisy_seq, frames, deltas, rotations, codewords] = generate_noisy_sequence(runs, pn, ovmod, snr, rotation_span)
+%  GENERATE_NOISY_SEQUENCE Generate a random noisy CCSK sequence
+%   The number of runs (runs) must be provided, with a PN sequence (pn), an overmodulation sequence
+%   (ovmod), the targeted SNR (snr) and the rotation span (rotation_span).
+%   The sequence represent runs CCSK frames of length(ovmod) symbols of length(pn) chips separated
+%   by at most 4 * length(ovmod) * length(pn) zeros and at least 3 * length(ovmod) * length(pn)
+%   zeros. The begining index (the time inacurracy, or Delta) is random. Each sequence is randomly
+%   rotated bsuch that a symbol can rotate from -rotation_span / 2 to rotation_span / 2. Finally, a 
+%   complex white gaussian noise is added, with a power ensuring an Signal-to-Noise Ration of snr.
+%
+%   Usage:
+%       noisy_seq =  generate_noisy_sequence(runs, pn, ovmod, snr, rotation_span)
+%         outputs only the noisy sequence
+%
+%       [noisy_seq, frames, deltas, rotations, codewords] = ...
+%           generate_noisy_sequence(runs, pn, ovmod, snr, rotation_span)
+%         also outputs the clear frames, deltas, rotations and sent codewords.
+%
+%   See also CORR_ABS_MAX, COMPUTE_TS_SCORE
+
 
 q = length(pn);
 N = length(ovmod);

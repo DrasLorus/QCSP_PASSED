@@ -22,3 +22,5 @@ end
 x_idxs = idxs(sub2ind(size(idxs), (1 : runs)', I(:))) + (0 : runs - 1)' * run_length;
 y_idxs = I;
 lin_indeces = sub2ind(size(score), x_idxs, y_idxs);
+
+

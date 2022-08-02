@@ -72,9 +72,9 @@ TEST_CASE("CDetectorSerial (L2, float) works for low snr inputs (q: 64, N: 60, w
     Mat_VarFree(tmp_pn);
     Mat_Close(parm_file);
 
-    mat_t * data_file = Mat_Open("../data/test_data_w34_step8_span2.0.mat", MAT_ACC_RDONLY);
+    mat_t * data_file = Mat_Open("../data/test_data_q64_N60_w34_step8_span2.0.mat", MAT_ACC_RDONLY);
     if (not bool(data_file)) {
-        throw "../data/test_data_w34_step8_span2.0.mat can't be opened.";
+        throw "../data/test_data_q64_N60_w34_step8_span2.0.mat can't be opened.";
     }
 
     matvar_t * tmp_mat = Mat_VarRead(data_file, "data_input_m10dB_w34_q64_N60_2pi_1_n30");
@@ -405,9 +405,9 @@ TEST_CASE("CDetectorSerial (Raw, float) works for low snr inputs (q: 64, N: 60, 
     Mat_VarFree(tmp_pn);
     Mat_Close(parm_file);
 
-    mat_t * data_file = Mat_Open("../data/test_data_w34_step8_span2.0.mat", MAT_ACC_RDONLY);
+    mat_t * data_file = Mat_Open("../data/test_data_q64_N60_w34_step8_span2.0.mat", MAT_ACC_RDONLY);
     if (not bool(data_file)) {
-        throw "../data/test_data_w34_step8_span2.0.mat can't be opened.";
+        throw "../data/test_data_q64_N60_w34_step8_span2.0.mat can't be opened.";
     }
 
     matvar_t * tmp_mat = Mat_VarRead(data_file, "data_input_m10dB_w34_q64_N60_2pi_1_n30");

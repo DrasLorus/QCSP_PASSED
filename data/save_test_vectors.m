@@ -257,7 +257,7 @@ full_struct = combineStructs(...
         struct_l2_sqr_inf), ...
     struct_l2_sqr_m10);
 
-filename = sprintf("test_data_w%i_step%i_span%3.1f.mat", p_omega, step_denominator, rotation_span / pi);
+filename = sprintf("test_data_q%i_N%i_w%i_step%i_span%3.1f.mat", q, N, p_omega, step_denominator, rotation_span / pi);
 
 if exist('OCTAVE_VERSION', 'builtin')
     save(filename, '-v7', '-struct', 'full_struct')

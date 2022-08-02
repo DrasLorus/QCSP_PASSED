@@ -38,12 +38,6 @@ template <unsigned TFrameSize, unsigned Tq, unsigned Tp_omega, typename TIn_Type
 class CDetectorSerial : public CDetector<TFrameSize, Tq, Tp_omega, TIn_Type, normed> {
     static_assert(is_pow2(Tq), "q must be a power of 2");
 
-private:
-    using base = CDetector<TFrameSize, Tq, Tp_omega, TIn_Type, normed>;
-    using typename base::state_t;
-
-    using score_proc_t = CScoreProcessor<TFrameSize, Tq, TIn_Type, normed>;
-
 public:
     static constexpr unsigned q       = Tq;
     static constexpr unsigned N       = TFrameSize;
@@ -52,6 +46,11 @@ public:
     static constexpr uint64_t window_size = N * q;
 
 private:
+    using base = CDetector<N, q, p_omega, TIn_Type, normed>;
+    using typename base::state_t;
+
+    using score_proc_t = CScoreProcessor<N, q, TIn_Type, normed>;
+
     std::vector<score_proc_t> score_processors;
 
     TIn_Type frequency_errors[p_omega];
@@ -163,15 +162,15 @@ public:
     template <typename Tpn>
     CDetectorSerial(Tpn * pn, TIn_Type threshold, unsigned step_denominator)
         : score_processors(p_omega, score_proc_t(pn)),
-          rotation_size(std::max(2 * q * step_denominator, 1U)),
-          rotation_vector(std::max(2 * q * step_denominator, 1U) * 2),
-          den_step(step_denominator),
+          rotation_size(std::max(2 * q * (step_denominator * unsigned(p_omega > 1)), 1U)),
+          rotation_vector(std::max(2 * q * (step_denominator * unsigned(p_omega > 1)), 1U) * 2),
+          den_step((step_denominator * unsigned(p_omega > 1))),
           _threshold(threshold) {
 
         memset(rotation_counters, 0, p_omega * sizeof(size_t));
 
         for (unsigned u = 0; u < p_omega; u++) {
-            frequency_errors[u] = TIn_Type((double(u) - double(p_omega - 1) / 2.) / double(step_denominator * q * 2));
+            frequency_errors[u] = TIn_Type((double(u) - double(p_omega - 1) / 2.) / double(den_step * q * 2 + unsigned(p_omega <= 1))) * TIn_Type(p_omega > 1);
         }
 
         std::vector<int> spanf(p_omega);

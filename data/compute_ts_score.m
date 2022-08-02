@@ -53,7 +53,7 @@ max_length = int32(max(2 * q * step_denominator, 1));
 %     local_rots(freq_idx) = local_rot;
 %     rotations(freq_idx, :) = exp(1i * local_rot / q * double(0 : max_length - 1));
 % end
-rotations    = exp(1i * pi / (step_denominator * q) * double(0 : max_length - 1));
+rotations    = exp(1i * pi / max(step_denominator * q, 1) * double(0 : max_length - 1));
 rotation_increments = int32([vec_spanf(1 : floor(p_omega / 2)) + int32(max_length), vec_spanf(floor(p_omega / 2) + 1 : end)]);
 
 rotation_counter    = int32(ones(1, p_omega));

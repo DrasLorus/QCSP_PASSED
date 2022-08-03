@@ -1,4 +1,4 @@
-#include "CScoreProcessor/CCorrAbsMax/CCorrAbsMax.hpp"
+#include "CScoreProcessor/CCorrelationEngine/TimeSliding/CCorrAbsMax/CCorrAbsMax.hpp"
 
 #include <algorithm>
 #include <catch2/catch.hpp>

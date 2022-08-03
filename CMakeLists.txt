@@ -98,7 +98,7 @@ endif ()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_compile_definitions (DEBUG=2)
-  add_compile_options (-O0 -ggdb)
+  add_compile_options (-O0 -ggdb ${NATIVE_COMPILATION})
 elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
   add_compile_definitions (NDEBUG)
   add_compile_options (-pedantic -Werror ${NATIVE_COMPILATION})
@@ -133,12 +133,22 @@ add_library (l2norm OBJECT sources/CDetector/CScoreProcessor/CNorm/CNorm.cpp)
 target_include_directories (l2norm PUBLIC sources/CDetector sources)
 
 add_library (
-  iterativeadder OBJECT sources/CDetector/CScoreProcessor/CIterativeAdder/CIterativeAdder.cpp
+  iterativeadder OBJECT
+  sources/CDetector/CScoreProcessor/CCorrelationEngine/TimeSliding/CIterativeAdder/CIterativeAdder.cpp
 )
 target_include_directories (iterativeadder PUBLIC sources/CDetector sources)
 
-add_library (corrabsmax OBJECT sources/CDetector/CScoreProcessor/CCorrAbsMax/CCorrAbsMax.cpp)
+add_library (
+  corrabsmax OBJECT
+  sources/CDetector/CScoreProcessor/CCorrelationEngine/TimeSliding/CCorrAbsMax/CCorrAbsMax.cpp
+)
 target_include_directories (corrabsmax PUBLIC sources/CDetector sources)
+
+add_library (
+  correngine OBJECT sources/CDetector/CScoreProcessor/CCorrelationEngine/CCorrelationEngine.cpp
+)
+target_include_directories (correngine PUBLIC sources/CDetector sources)
+target_link_libraries (correngine PUBLIC iterativeadder corrabsmax)
 
 add_library (
   scoreaccu OBJECT sources/CDetector/CScoreProcessor/CScoreAccumulator/CScoreAccumulator.cpp
@@ -147,13 +157,7 @@ target_include_directories (scoreaccu PUBLIC sources/CDetector sources)
 
 add_library (score_processor OBJECT sources/CDetector/CScoreProcessor/CScoreProcessor.cpp)
 target_include_directories (score_processor PUBLIC sources sources/CDetector)
-target_link_libraries (
-  score_processor
-  PUBLIC corrabsmax
-         l2norm
-         iterativeadder
-         scoreaccu
-)
+target_link_libraries (score_processor PUBLIC l2norm scoreaccu correngine)
 
 add_library (detectors OBJECT sources/CDetector/CDetector.cpp)
 target_include_directories (score_processor PUBLIC sources)
@@ -176,8 +180,8 @@ if (ENABLE_TESTING)
 
   add_executable (
     iterativeadder_tests
-    sources/CDetector/CScoreProcessor/CIterativeAdder/testing/CIterativeAdder_test.cpp
-    sources/CDetector/CScoreProcessor/CIterativeAdder/testing/CIterativeAdder_i16_test.cpp
+    sources/CDetector/CScoreProcessor/CCorrelationEngine/TimeSliding/CIterativeAdder/testing/CIterativeAdder_test.cpp
+    sources/CDetector/CScoreProcessor/CCorrelationEngine/TimeSliding/CIterativeAdder/testing/CIterativeAdder_i16_test.cpp
   )
   target_link_libraries (
     iterativeadder_tests PUBLIC iterativeadder catch_common_${PROJECT_NAME} matio
@@ -186,8 +190,8 @@ if (ENABLE_TESTING)
   catch_discover_tests (iterativeadder_tests WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
   add_executable (
-    corrabsmax_tests sources/CDetector/CScoreProcessor/CCorrAbsMax/testing/CCorrAbsMax_test.cpp
-                     sources/CDetector/CScoreProcessor/CCorrAbsMax/testing/CCorrAbsMax_i16_test.cpp
+    corrabsmax_tests sources/CDetector/CScoreProcessor/CCorrelationEngine/TimeSliding/CCorrAbsMax/testing/CCorrAbsMax_test.cpp
+                     sources/CDetector/CScoreProcessor/CCorrelationEngine/TimeSliding/CCorrAbsMax/testing/CCorrAbsMax_i16_test.cpp
   )
   target_link_libraries (corrabsmax_tests PUBLIC corrabsmax catch_common_${PROJECT_NAME} matio)
 
@@ -215,9 +219,10 @@ if (ENABLE_TESTING)
   foreach (TARGET_Q ${LIST_TARGET_Q})
     set (LOCAL_FILENAME CDetector_q${TARGET_Q}_N60_w1_high_test.cpp)
     list (APPEND LIST_DETECTOR_TB ${LOCAL_FILENAME})
-    configure_file (sources/CDetector/testing/CDetector_qXX_N60_w1_high_test.cpp.in ${LOCAL_FILENAME} @ONLY)
+    configure_file (
+      sources/CDetector/testing/CDetector_qXX_N60_w1_high_test.cpp.in ${LOCAL_FILENAME} @ONLY
+    )
   endforeach ()
-  
 
   add_executable (
     detector_tests

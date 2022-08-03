@@ -160,8 +160,8 @@ public:
     }
 
     template <typename Tpn>
-    CDetectorSerial(Tpn * pn, TIn_Type threshold, unsigned step_denominator)
-        : score_processors(p_omega, score_proc_t(pn)),
+    CDetectorSerial(Tpn * _pn, TIn_Type threshold, unsigned step_denominator)
+        : score_processors(p_omega, score_proc_t(_pn)),
           rotation_size(std::max(2 * q * (step_denominator * unsigned(p_omega > 1)), 1U)),
           rotation_vector(std::max(2 * q * (step_denominator * unsigned(p_omega > 1)), 1U) * 2),
           den_step((step_denominator * unsigned(p_omega > 1))),

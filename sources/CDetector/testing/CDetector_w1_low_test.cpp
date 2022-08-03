@@ -1,4 +1,4 @@
-#include "CDetector/CDetector.hpp"
+#include "../CDetector.hpp"
 
 #include <algorithm>
 #include <catch2/catch.hpp>

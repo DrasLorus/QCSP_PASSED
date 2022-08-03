@@ -1,4 +1,4 @@
-#include "CScoreProcessor/CScoreAccumulator/CScoreAccumulator.hpp"
+#include "../CScoreAccumulator.hpp"
 
 #include <algorithm>
 #include <catch2/catch.hpp>

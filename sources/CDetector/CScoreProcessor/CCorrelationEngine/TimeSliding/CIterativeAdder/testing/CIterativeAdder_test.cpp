@@ -1,4 +1,4 @@
-#include "CScoreProcessor/CCorrelationEngine/TimeSliding/CIterativeAdder/CIterativeAdder.hpp"
+#include "../CIterativeAdder.hpp"
 
 #include <algorithm>
 #include <catch2/catch.hpp>

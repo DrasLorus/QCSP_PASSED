@@ -1,4 +1,4 @@
-#include "CScoreProcessor/CNorm/CNorm.hpp"
+#include "../CNorm.hpp"
 
 #include <algorithm>
 #include <catch2/catch.hpp>

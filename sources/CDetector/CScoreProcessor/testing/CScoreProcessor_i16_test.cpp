@@ -1,4 +1,4 @@
-#include "CScoreProcessor/CScoreProcessor.hpp"
+#include "../CScoreProcessor.hpp"
 
 #include <algorithm>
 #include <bits/types/FILE.h>

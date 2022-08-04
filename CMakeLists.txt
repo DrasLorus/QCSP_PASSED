@@ -1,9 +1,6 @@
 cmake_minimum_required (VERSION 3.16.0 FATAL_ERROR)
 if (CMAKE_VERSION VERSION_LESS 3.18.0)
-  message (
-    WARNING
-      "You are using an outdated version of cmake (typically used on Ubuntu 20.04). You may consider using an updated CMake."
-  )
+  message (WARNING "You are using an outdated version of cmake (typically used on Ubuntu 20.04). You may consider using an updated CMake.")
 endif ()
 
 # setting this is required
@@ -22,9 +19,9 @@ project (
 )
 # this sets the project name
 
-# ##################################################################################################
+# ##########################################################################################################################################
 # Options #####
-# ##################################################################################################
+# ##########################################################################################################################################
 
 option (AGRESSIVE_OPTIMISATION "enable agressive flags" ON)
 option (PREFER_STATIC_LIBRARY "prefer static libraries" ON)
@@ -36,7 +33,7 @@ option (ENABLE_TESTING "enable unit-testing with Catch2" ON)
 
 option (ENABLE_SYSTEM_CATCH2 "Use system-provided Catch2 library" ON)
 
-# ##################################################################################################
+# ##########################################################################################################################################
 
 include (FetchContent)
 
@@ -58,10 +55,7 @@ find_file (matio-header matio.h REQUIRED)
 find_package (Catch2 QUIET)
 if (((NOT Catch2_FOUND) OR (Catch2_VERSION VERSION_LESS 2.13)) AND ENABLE_TESTING)
   if (ENABLE_SYSTEM_CATCH2)
-    message (
-      FATAL_ERROR
-        "Catch2 not found, and you asked to use a system provided version. Please install Catch v2.x (x > 13)"
-    )
+    message (FATAL_ERROR "Catch2 not found, and you asked to use a system provided version. Please install Catch v2.x (x > 13)")
   else ()
     fetchcontent_declare (
       Catch219
@@ -122,16 +116,96 @@ if (DEBUG_SCORE)
   add_compile_definitions (DEBUG_LOG_SCORE=1)
 endif ()
 
+find_program (
+  mat_interpreter
+  NAMES matlab octave
+  PATHS /bin
+        /usr/bin
+        /usr/local/bin
+        QUIET
+)
+if (NOT mat_interpreter)
+  message (STATUS "MATLAB/Octave interpreter not found. Test vectors will not be generated on-the-fly.")
+else ()
+  string (
+    REGEX MATCH
+          "/matlab$"
+          MAT_ITPR_TYPE
+          ${mat_interpreter}
+  )
+  if (MAT_ITPR_TYPE)
+    if (NOT MATLAB_RELEASE)
+      execute_process (COMMAND ${mat_interpreter} -nosplash -nojvm -batch "fprintf('%s', version())" OUTPUT_VARIABLE MATLAB_FUZZY)
+      string (
+        REGEX MATCH
+              "R20[1-9][0-9][ab]"
+              MATLAB_RELEASE_TMP
+              ${MATLAB_FUZZY}
+      )
+      set (
+        MATLAB_RELEASE
+        ${MATLAB_RELEASE_TMP}
+        CACHE INTERNAL "" FORCE
+      )
+      unset (MATLAB_RELEASE_TMP)
+
+      set (
+        mat_generator_args
+        "-nojvm;-nosplash;-batch"
+        CACHE INTERNAL ""
+      )
+
+      message (STATUS "Found MATLAB ${MATLAB_RELEASE} as ${mat_interpreter}.")
+    endif ()
+
+  else ()
+    if (NOT OCTAVE_VERSION)
+      execute_process (COMMAND ${mat_interpreter} --eval "fprintf('%s', OCTAVE_VERSION)" OUTPUT_VARIABLE OCTAVE_VERSION_TMP)
+
+      set (
+        OCTAVE_VERSION
+        ${OCTAVE_VERSION_TMP}
+        CACHE INTERNAL "" FORCE
+      )
+      unset (OCTAVE_VERSION_TMP)
+
+      set (
+        mat_generator_args
+        "--no-gui;-f;-q;--eval"
+        CACHE INTERNAL ""
+      )
+
+      message (STATUS "Found Octave ${OCTAVE_VERSION} as  ${mat_interpreter}.")
+    endif ()
+  endif ()
+endif ()
+
+if (ENABLE_TESTING)
+  find_package (
+    Python
+    COMPONENTS Interpreter
+    REQUIRED
+  )
+endif ()
+
 include_directories (BEFORE sources)
 
-# ##################################################################################################
+# ##########################################################################################################################################
 # target definitions
-# ##################################################################################################
-# ##################################################################################################
+# ##########################################################################################################################################
+# ##########################################################################################################################################
 
-set (LIST_TARGET_Q "64;128;256;512")
-
-add_subdirectory (sources/CDetector)
+set (
+  LIST_TARGET_Q
+  "64;128;256;512"
+  CACHE STRING "Value of q to test."
+)
+set (
+  LIST_TARGET_N
+  "60"
+  CACHE INTERNAL "" FORCE
+) # Currently not supported
+set (LIST_TARGET_W "1") # Currently not supported
 
 if (ENABLE_TESTING)
   include (CTest)
@@ -140,4 +214,36 @@ if (ENABLE_TESTING)
   add_library (catch_common_${PROJECT_NAME} OBJECT sources/testing/main_catch2.cpp)
   target_link_libraries (catch_common_${PROJECT_NAME} PUBLIC Catch2::Catch2)
 
+  foreach (TARGET_Q ${LIST_TARGET_Q})
+    foreach (TARGET_N ${LIST_TARGET_N})
+      foreach (TARGET_W ${LIST_TARGET_W})
+        set (local_filename "test_data_q${TARGET_Q}_N${TARGET_N}_w${TARGET_W}_step0_span0.0.mat")
+
+        # If MATLAB or Octave have been found, generate test vectors. Just create dummy dependencies otherwise.
+        if (OCTAVE_VERSION OR MATLAB_RELEASE)
+          add_custom_command (
+            OUTPUT ${CMAKE_SOURCE_DIR}/data/${local_filename}
+            COMMAND
+              ${mat_interpreter} ${mat_generator_args}
+              "PN = double(load('pn_sequences.mat').PN${TARGET_Q}); best_N = load('parameters_20210903.mat').best_N; fnm = save_test_vectors(PN, best_N, 0, 1, 0, 0); fprintf('%s generated.\\n', fnm)"
+            DEPENDS ${CMAKE_SOURCE_DIR}/data/save_test_vectors.m
+                    ${CMAKE_SOURCE_DIR}/data/compute_ts_score.m
+                    ${CMAKE_SOURCE_DIR}/data/generate_noisy_sequence.m
+                    ${CMAKE_SOURCE_DIR}/data/corr_abs_max.m
+                    ${CMAKE_SOURCE_DIR}/data/pn_sequences.mat
+                    ${CMAKE_SOURCE_DIR}/data/parameters_20210903.mat
+            USES_TERMINAL
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/data
+            VERBATIM
+          )
+        endif ()
+
+        add_custom_target (gen_data_q${TARGET_Q}_N${TARGET_N}_w${TARGET_W} DEPENDS ${CMAKE_SOURCE_DIR}/data/${local_filename})
+        unset (${local_filename})
+      endforeach ()
+    endforeach ()
+  endforeach ()
+
 endif ()
+
+add_subdirectory (sources/CDetector)

@@ -259,7 +259,7 @@ TEMPLATE_TEST_CASE("CDetectorSerial (L2) works for high snr inputs (q: @TARGET_Q
         REQUIRE(results.size() == 20LU);
 
         constexpr TestType low_score  = TestType(1.);
-        constexpr TestType high_score = TestType(double(q * N) / sqrt(double(q)));
+        constexpr TestType high_score = TestType(double(q * N) / @TARGET_SQRT_Q@);
         constexpr TestType cfos       = TestType(0.);
         constexpr TestType tolerance  = TestType(1e-5);
 

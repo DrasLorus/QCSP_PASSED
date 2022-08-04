@@ -56,29 +56,35 @@ TEST_CASE("CScoreAccumulator works for high snr inputs (q: 64, N: 60)", "[scorea
     delete proc;
 }
 
-TEST_CASE("CScoreAccumulator works for low snr inputs (q: 64, N: 60)", "[scoreaccu][low]") {
+TEMPLATE_TEST_CASE("CScoreAccumulator works for low snr inputs (q: 64, N: 60)", "[scoreaccu][low][q64][N60]", float, double) {
 
     constexpr unsigned q = 64;
     constexpr unsigned N = 60;
 
     mat_t * data_file = Mat_Open("../data/test_data_w1_nofreq.mat", MAT_ACC_RDONLY);
 
-    const vector<float> cabs_in = load_data_vector<float, float>(data_file, "cabs_max_l2_infdB_w1_q64_N60_0_n10");
+    const vector<TestType> cabs_in = load_data_vector<TestType, float>(data_file, "cabs_max_l2_m10dB_w1_q64_N60_0_n30");
 
-    const vector<float> score_out = load_data_vector<float, float>(data_file, "score_l2_infdB_w1_q64_N60_0_n10");
+    const vector<TestType> score_out = load_data_vector<TestType, float>(data_file, "score_l2_m10dB_w1_q64_N60_0_n30");
 
     Mat_Close(data_file);
 
-    CScoreAccumulator<N, q> * proc = new CScoreAccumulator<N, q>();
+    CScoreAccumulator<N, q, TestType> * proc = new CScoreAccumulator<N, q, TestType>();
 
-    vector<float> results(score_out.size(), 0.f);
+    vector<TestType> results(score_out.size(), 0.f);
 
     for (int64_t i = 0; i < int64_t(results.size()); i++) {
         results[i] = proc->process(cabs_in[i]);
     }
 
-    for (int64_t i = 0; i < int64_t(results.size()); i++) {
-        REQUIRE_THAT(results[i], Catch::Matchers::WithinRel(score_out[i], 1e-4f));
+    for (int64_t i = 0; i < q * N; i++) {
+        INFO("input no " << i);
+        REQUIRE_THAT(results[i], Catch::Matchers::WithinAbs(score_out[i], TestType(1e-4f)));
+    }
+
+    for (int64_t i = q * N; i < int64_t(results.size()); i++) {
+        INFO("input no " << i);
+        REQUIRE_THAT(results[i], Catch::Matchers::WithinRel(score_out[i], TestType(1e-4f)));
     }
 
     delete proc;

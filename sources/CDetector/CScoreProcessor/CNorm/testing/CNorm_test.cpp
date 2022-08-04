@@ -61,7 +61,7 @@ TEST_CASE("CNorm (L2) works for high snr inputs (q: 64)", "[norm][high][l2]") {
     delete proc;
 }
 
-TEST_CASE("CNorm (L2) works for low snr inputs (q: 64)", "[norm][low][l2]") {
+TEMPLATE_TEST_CASE("CNorm (L2) works for low snr inputs (q: 64)", "[norm][low][l2][q64]", float, double) {
 
     constexpr unsigned q = 64;
 
@@ -77,8 +77,8 @@ TEST_CASE("CNorm (L2) works for low snr inputs (q: 64)", "[norm][low][l2]") {
 
     mat_complex_split_t * in_data = (mat_complex_split_t *) tmp_mat->data;
 
-    const vector<float> re_in((float *) in_data->Re, ((float *) in_data->Re) + tmp_mat->dims[0]);
-    const vector<float> im_in((float *) in_data->Im, ((float *) in_data->Im) + tmp_mat->dims[0]);
+    const vector<TestType> re_in((float *) in_data->Re, ((float *) in_data->Re) + tmp_mat->dims[0]);
+    const vector<TestType> im_in((float *) in_data->Im, ((float *) in_data->Im) + tmp_mat->dims[0]);
 
     Mat_VarFree(tmp_mat);
 
@@ -87,14 +87,14 @@ TEST_CASE("CNorm (L2) works for low snr inputs (q: 64)", "[norm][low][l2]") {
         throw "norms_l2_m10dB_w1_q64_N60_0_n30 can't be loaded.";
     }
 
-    const vector<float> norms_out((float *) tmp_mat->data, ((float *) tmp_mat->data) + tmp_mat->dims[0]);
+    const vector<TestType> norms_out((float *) tmp_mat->data, ((float *) tmp_mat->data) + tmp_mat->dims[0]);
 
     Mat_VarFree(tmp_mat);
     Mat_Close(data_file);
 
-    CNorm<q> * proc = new CNorm<q>();
+    CNorm<q, TestType> * proc = new CNorm<q, TestType>();
 
-    vector<float> results(norms_out.size(), 0.f);
+    vector<TestType> results(norms_out.size(), 0.f);
 
     for (int64_t i = 0; i < int64_t(results.size()); i++) {
         results[i] = proc->process(re_in[i], im_in[i]);
@@ -102,11 +102,11 @@ TEST_CASE("CNorm (L2) works for low snr inputs (q: 64)", "[norm][low][l2]") {
 
     // Initialization Startup
     for (int64_t i = 0; i < int64_t(q - 1); i++) {
-        REQUIRE_THAT(results[i], Catch::Matchers::WithinRel(norms_out[i] * norms_out[i] + 1, 1e-5f));
+        REQUIRE_THAT(results[i], Catch::Matchers::WithinRel(norms_out[i] * norms_out[i] + 1, TestType(1e-5f)));
     }
 
     for (int64_t i = q - 1; i < int64_t(results.size()); i++) {
-        REQUIRE_THAT(std::sqrt(results[i]), Catch::Matchers::WithinRel(norms_out[i], 5e-4f));
+        REQUIRE_THAT(std::sqrt(results[i]), Catch::Matchers::WithinRel(norms_out[i], TestType(5e-4f)));
     }
 
     delete proc;

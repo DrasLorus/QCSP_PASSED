@@ -8,7 +8,7 @@
 using namespace QCSP::StandaloneDetector;
 using std::vector;
 
-TEST_CASE("CCorrAbsMax works for high snr inputs (q: 64)", "[corrabsmax][high]") {
+TEST_CASE("CCorrAbsMax works for high snr inputs (q: 64)", "[corrabsmax][high][q64]") {
 
     constexpr unsigned q = 64;
 
@@ -72,7 +72,7 @@ TEST_CASE("CCorrAbsMax works for high snr inputs (q: 64)", "[corrabsmax][high]")
     delete proc;
 }
 
-TEST_CASE("CCorrAbsMax works for low snr inputs (q: 64)", "[corrabsmax][low]") {
+TEMPLATE_TEST_CASE("CCorrAbsMax works for low snr inputs (q: 64)", "[corrabsmax][low][q64]", float, double) {
 
     constexpr unsigned q = 64;
 
@@ -86,7 +86,7 @@ TEST_CASE("CCorrAbsMax works for low snr inputs (q: 64)", "[corrabsmax][low]") {
         throw "PN64 can't be loaded.";
     }
 
-    const vector<float> pn((double *) tmp_pn->data, (double *) tmp_pn->data + tmp_pn->dims[1]);
+    const vector<TestType> pn((double *) tmp_pn->data, (double *) tmp_pn->data + tmp_pn->dims[1]);
     if (pn.size() != q) {
         throw "PN64 and q don't match.";
     }
@@ -106,8 +106,8 @@ TEST_CASE("CCorrAbsMax works for low snr inputs (q: 64)", "[corrabsmax][low]") {
 
     mat_complex_split_t * in_data = (mat_complex_split_t *) tmp_mat->data;
 
-    const vector<float> re_in((float *) in_data->Re, ((float *) in_data->Re) + tmp_mat->dims[0]);
-    const vector<float> im_in((float *) in_data->Im, ((float *) in_data->Im) + tmp_mat->dims[0]);
+    const vector<TestType> re_in((float *) in_data->Re, ((float *) in_data->Re) + tmp_mat->dims[0]);
+    const vector<TestType> im_in((float *) in_data->Im, ((float *) in_data->Im) + tmp_mat->dims[0]);
 
     Mat_VarFree(tmp_mat);
 
@@ -116,21 +116,21 @@ TEST_CASE("CCorrAbsMax works for low snr inputs (q: 64)", "[corrabsmax][low]") {
         throw "cabs_max_sqr_raw_m10dB_w1_q64_N60_0_n30 can't be loaded.";
     }
 
-    const vector<float> cabs_out((float *) tmp_mat->data, ((float *) tmp_mat->data) + tmp_mat->dims[0]);
+    const vector<TestType> cabs_out((float *) tmp_mat->data, ((float *) tmp_mat->data) + tmp_mat->dims[0]);
 
     Mat_VarFree(tmp_mat);
     Mat_Close(data_file);
 
-    CCorrAbsMax<q> * proc = new CCorrAbsMax<q>(pn.data());
+    CCorrAbsMax<q, TestType> * proc = new CCorrAbsMax<q, TestType>(pn.data());
 
-    vector<float> results(cabs_out.size(), 0.f);
+    vector<TestType> results(cabs_out.size(), 0.f);
 
     for (int64_t i = 0; i < int64_t(results.size()); i++) {
         results[i] = proc->process(re_in[i], im_in[i]);
     }
 
     for (int64_t i = 0; i < int64_t(results.size()); i++) {
-        REQUIRE_THAT(results[i], Catch::Matchers::WithinRel(cabs_out[i], 1e-4f));
+        REQUIRE_THAT(results[i], Catch::Matchers::WithinRel(cabs_out[i], TestType(1e-4f)));
     }
 
     delete proc;

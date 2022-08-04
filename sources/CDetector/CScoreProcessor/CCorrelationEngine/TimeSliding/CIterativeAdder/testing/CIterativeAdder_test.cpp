@@ -61,7 +61,7 @@ TEST_CASE("CIterativeAdder works for high snr inputs (q: 64)", "[iterativeadder]
     delete proc;
 }
 
-TEST_CASE("CIterativeAdder works for low snr inputs (q: 64)", "[iterativeadder][low]") {
+TEMPLATE_TEST_CASE("CIterativeAdder works for low snr inputs (q: 64)", "[iterativeadder][low][q64]", float, double) {
 
     constexpr unsigned q = 64;
 
@@ -77,8 +77,8 @@ TEST_CASE("CIterativeAdder works for low snr inputs (q: 64)", "[iterativeadder][
 
     const mat_complex_split_t * in_data = (mat_complex_split_t *) tmp_mat->data;
 
-    const vector<float> re_in((float *) in_data->Re, ((float *) in_data->Re) + tmp_mat->dims[0]);
-    const vector<float> im_in((float *) in_data->Im, ((float *) in_data->Im) + tmp_mat->dims[0]);
+    const vector<TestType> re_in((float *) in_data->Re, ((float *) in_data->Re) + tmp_mat->dims[0]);
+    const vector<TestType> im_in((float *) in_data->Im, ((float *) in_data->Im) + tmp_mat->dims[0]);
 
     Mat_VarFree(tmp_mat);
 
@@ -89,24 +89,24 @@ TEST_CASE("CIterativeAdder works for low snr inputs (q: 64)", "[iterativeadder][
 
     const mat_complex_split_t * out_data = (mat_complex_split_t *) tmp_mat->data;
 
-    const vector<float> re_out((float *) out_data->Re, ((float *) out_data->Re) + tmp_mat->dims[0]);
-    const vector<float> im_out((float *) out_data->Im, ((float *) out_data->Im) + tmp_mat->dims[0]);
+    const vector<TestType> re_out((float *) out_data->Re, ((float *) out_data->Re) + tmp_mat->dims[0]);
+    const vector<TestType> im_out((float *) out_data->Im, ((float *) out_data->Im) + tmp_mat->dims[0]);
 
     Mat_VarFree(tmp_mat);
     Mat_Close(data_file);
 
-    CIterativeAdder<q> * proc = new CIterativeAdder<q>();
+    CIterativeAdder<q, TestType> * proc = new CIterativeAdder<q, TestType>();
 
-    vector<float> re_results(re_out.size(), 0.f);
-    vector<float> im_results(im_out.size(), 0.f);
+    vector<TestType> re_results(re_out.size(), 0.f);
+    vector<TestType> im_results(im_out.size(), 0.f);
 
-    float * p_re_out = re_results.data();
-    float * p_im_out = im_results.data();
+    TestType * p_re_out = re_results.data();
+    TestType * p_im_out = im_results.data();
     for (int64_t i = 0; i < int64_t(re_results.size()); i++) {
         proc->process(re_in[i], im_in[i], p_re_out++, p_im_out++);
     }
 
-    constexpr float margin = 12e-6; // -12 < Data input < 12
+    constexpr TestType margin = 12e-6; // -12 < Data input < 12
 
     for (int64_t i = 0; i < int64_t(re_results.size()); i++) {
         REQUIRE_THAT(re_results[i], Catch::Matchers::WithinAbs(re_out[i], margin));

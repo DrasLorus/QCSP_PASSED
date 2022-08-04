@@ -67,7 +67,7 @@ TEST_CASE("CScoreAccumulator int16_t works for high snr inputs (q: 64, N: 60)", 
     delete proc;
 }
 
-TEST_CASE("CScoreAccumulator int16_t works for low snr inputs (q: 64, N: 60)", "[scoreaccu][low][fixed]") {
+TEST_CASE("CScoreAccumulator int16_t works for low snr inputs (q: 64, N: 60)", "[scoreaccu][low][fixed][q64][N60][w1]") {
 
     constexpr unsigned q     = 64;
     constexpr unsigned N     = 60;
@@ -81,9 +81,9 @@ TEST_CASE("CScoreAccumulator int16_t works for low snr inputs (q: 64, N: 60)", "
 
     mat_t * data_file = Mat_Open("../data/test_data_w1_nofreq.mat", MAT_ACC_RDONLY);
 
-    const vector<float> cabs_in = load_data_vector<float, float>(data_file, "cabs_max_l2_infdB_w1_q64_N60_0_n10");
+    const vector<float> cabs_in = load_data_vector<float, float>(data_file, "cabs_max_l2_m10dB_w1_q64_N60_0_n30");
 
-    const vector<float> score_out = load_data_vector<float, float>(data_file, "score_l2_infdB_w1_q64_N60_0_n10");
+    const vector<float> score_out = load_data_vector<float, float>(data_file, "score_l2_m10dB_w1_q64_N60_0_n30");
 
     Mat_Close(data_file);
 
@@ -100,7 +100,7 @@ TEST_CASE("CScoreAccumulator int16_t works for low snr inputs (q: 64, N: 60)", "
     }
 
     for (int64_t i = q * N; i < int64_t(results.size()); i++) {
-        REQUIRE_THAT(results[i], Catch::Matchers::WithinAbs(score_out[i], 5e-4f));
+        REQUIRE_THAT(results[i], Catch::Matchers::WithinRel(score_out[i], 1e-5f));
     }
 
     delete proc;

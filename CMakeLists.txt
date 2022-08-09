@@ -32,17 +32,19 @@ option (DEBUG_SCORE "Dump score for debugging purpose" OFF)
 option (ENABLE_TESTING "enable unit-testing with Catch2" ON)
 
 option (ENABLE_SYSTEM_CATCH2 "Use system-provided Catch2 library" ON)
+option (ENABLE_SYSTEM_MATIO "Use system-provided MatIO library (unused for now)" ON)
 
 # ##########################################################################################################################################
 
 include (FetchContent)
 
-find_package (Boost REQUIRED COMPONENTS program_options)
-
 find_library (matio matio REQUIRED)
-find_file (matio-header matio.h REQUIRED)
+find_file (matio_HEADER matio.h REQUIRED)
+get_filename_component (matio_INCLUDEDIR ${matio_HEADER} DIRECTORY CACHE)
 
-# Currently unused dependencies
+### Currently unused dependencies
+
+# find_package (Boost REQUIRED COMPONENTS program_options)
 
 # find_library ( fftw NAMES fftw fftw3 HINTS "/usr/local/lib" "/usr/local" REQUIRED )
 
@@ -52,19 +54,19 @@ find_file (matio-header matio.h REQUIRED)
 
 # find_package (Threads REQUIRED)
 
-find_package (Catch2 QUIET)
-if (((NOT Catch2_FOUND) OR (Catch2_VERSION VERSION_LESS 2.13)) AND ENABLE_TESTING)
-  if (ENABLE_SYSTEM_CATCH2)
+if (ENABLE_SYSTEM_CATCH2)
+  find_package (Catch2 QUIET)
+  if (((NOT Catch2_FOUND) OR (Catch2_VERSION VERSION_LESS 2.13)) AND ENABLE_TESTING)
     message (FATAL_ERROR "Catch2 not found, and you asked to use a system provided version. Please install Catch v2.x (x > 13)")
-  else ()
-    fetchcontent_declare (
-      Catch219
-      URL https://github.com/catchorg/Catch2/archive/refs/tags/v2.13.9.tar.gz
-      URL_HASH SHA256=06dbc7620e3b96c2b69d57bf337028bf245a211b3cddb843835bfe258f427a52
-    )
-    fetchcontent_makeavailable (Catch219)
-    list (APPEND CMAKE_MODULE_PATH "${catch219_SOURCE_DIR}/contrib")
   endif ()
+else ()
+  fetchcontent_declare (
+    Catch219
+    URL https://github.com/catchorg/Catch2/archive/refs/tags/v2.13.9.tar.gz
+    URL_HASH SHA256=06dbc7620e3b96c2b69d57bf337028bf245a211b3cddb843835bfe258f427a52
+  )
+  fetchcontent_makeavailable (Catch219)
+  list (APPEND CMAKE_MODULE_PATH "${catch219_SOURCE_DIR}/contrib")
 endif ()
 
 if (PROFILING)
@@ -188,7 +190,7 @@ if (ENABLE_TESTING)
   )
 endif ()
 
-include_directories (BEFORE sources)
+include_directories (BEFORE sources ${matio_INCLUDEDIR})
 
 # ##########################################################################################################################################
 # target definitions
@@ -220,7 +222,7 @@ if (ENABLE_TESTING)
         set (local_filename "test_data_q${TARGET_Q}_N${TARGET_N}_w${TARGET_W}_step0_span0.0.mat")
 
         # If MATLAB or Octave have been found, generate test vectors. Just create dummy dependencies otherwise.
-        if (OCTAVE_VERSION OR MATLAB_RELEASE)
+        if (OCTAVE_VERSIONS OR MATLAB_RELEASES)
           add_custom_command (
             OUTPUT ${CMAKE_SOURCE_DIR}/data/${local_filename}
             COMMAND

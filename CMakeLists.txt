@@ -207,10 +207,14 @@ if (ENABLE_TESTING)
   add_library (catch_common_${PROJECT_NAME} OBJECT sources/testing/main_catch2.cpp)
   target_link_libraries (catch_common_${PROJECT_NAME} PUBLIC Catch2::Catch2)
 
+  configure_file (data/generator_script.m.in ${CMAKE_CURRENT_SOURCE_DIR}/data/generator_script.m)
+
   foreach (TARGET_Q ${LIST_TARGET_Q})
     foreach (TARGET_N ${LIST_TARGET_N})
       foreach (TARGET_W ${LIST_TARGET_W})
         set (local_filename "test_data_q${TARGET_Q}_N${TARGET_N}_w${TARGET_W}_step0_span0.0.mat")
+
+        configure_file (data/data_generator_qXX_NXX_wXX_step0_0pi_1.m.in ${CMAKE_CURRENT_SOURCE_DIR}/data/data_generator_q${TARGET_Q}_N${TARGET_N}_w${TARGET_W}_step0_0pi_1.m)
 
         # If MATLAB or Octave have been found, generate test vectors. Just create dummy dependencies otherwise.
         if ((OCTAVE_VERSIONS OR MATLAB_RELEASES) AND ENABLE_DATA_AUTOGENERATION)

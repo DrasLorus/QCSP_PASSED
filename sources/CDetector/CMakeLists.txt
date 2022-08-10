@@ -21,11 +21,8 @@ if (ENABLE_TESTING)
   endforeach ()
 
   add_executable (
-    detector_tests
-    testing/CDetector_w1_low_test.cpp
-    testing/CDetector_w4_pi_4_low_test.cpp
-    testing/CDetector_w34_pi_8_low_test.cpp
-    ${LIST_DETECTOR_TB}
+    detector_tests testing/CDetector_w1_low_test.cpp testing/CDetector_w4_pi_4_low_test.cpp testing/CDetector_w34_pi_8_low_test.cpp
+                   ${LIST_DETECTOR_TB}
   )
   target_link_libraries (detector_tests PUBLIC detectors catch_common_${PROJECT_NAME} ${matio})
 

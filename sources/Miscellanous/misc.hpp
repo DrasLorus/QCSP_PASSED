@@ -1,9 +1,9 @@
 #ifndef _QCSP_PASSED_MISC_HPP_
 #define _QCSP_PASSED_MISC_HPP_ 1
 
-#define _USE_MATH_DEFINES 
-#include <array>
+#define _USE_MATH_DEFINES
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 

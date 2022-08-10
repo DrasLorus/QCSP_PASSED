@@ -1,7 +1,6 @@
 #include "../CScoreProcessor.hpp"
 
 #include <algorithm>
-#include <bits/types/FILE.h>
 #include <catch2/catch.hpp>
 #include <cstdio>
 #include <matio.h>

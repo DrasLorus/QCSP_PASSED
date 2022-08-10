@@ -27,7 +27,7 @@ if (ENABLE_TESTING)
     testing/CDetector_w34_pi_8_low_test.cpp
     ${LIST_DETECTOR_TB}
   )
-  target_link_libraries (detector_tests PUBLIC detectors catch_common_${PROJECT_NAME} matio)
+  target_link_libraries (detector_tests PUBLIC detectors catch_common_${PROJECT_NAME} ${matio})
 
   add_dependencies (detector_tests ${LIST_DETECTOR_DEP})
 

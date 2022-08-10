@@ -4,6 +4,7 @@
 #include "./CScoreProcessor/CScoreProcessor.hpp"
 
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace QCSP {
@@ -32,6 +33,8 @@ protected:
 public:
     virtual void process(TIn_Type re_in, TIn_Type im_in, state_t * state)     = 0;
     virtual void process_sqr(TIn_Type re_in, TIn_Type im_in, state_t * state) = 0;
+
+    virtual ~CDetector() = default;
 };
 
 template <unsigned TFrameSize, unsigned Tq, unsigned Tp_omega, typename TIn_Type = float, bool normed = true>

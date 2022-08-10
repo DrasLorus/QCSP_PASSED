@@ -1,15 +1,18 @@
-#include <array>
 #ifndef _QCSP_PASSED_MISC_HPP_
 #define _QCSP_PASSED_MISC_HPP_ 1
 
-#define _USE_MATH_DEFINES
-
+#define _USE_MATH_DEFINES 
+#include <array>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 
 namespace QCSP {
 namespace StandaloneDetector {
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 constexpr double pi      = (double) M_PI;
 constexpr double two_pi  = 2. * pi;

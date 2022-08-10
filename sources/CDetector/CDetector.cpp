@@ -1,4 +1,4 @@
-#include "./CDetector/CDetector.hpp"
+#include "./CDetector.hpp"
 
 using namespace QCSP::StandaloneDetector;
 

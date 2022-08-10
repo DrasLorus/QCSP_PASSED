@@ -6,18 +6,39 @@ endif ()
 # setting this is required
 
 set (CMAKE_CXX_STANDARD 14)
+set (CMAKE_CXX_EXTENSIONS OFF)
 set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../lib)
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../lib)
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../bin)
 
 set (CMAKE_EXPORT_COMPILE_COMMANDS true)
 
-project (
-  QCSP_PASSED
-  LANGUAGES CXX
-  VERSION 0.1
-)
+project (QCSP_PASSED LANGUAGES CXX VERSION 0.1)
 # this sets the project name
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  set (IS_WINDOWS ON CACHE INTERNAL "System is Windows" FORCE)
+  set (VCPKG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/windows/vcpkg CACHE INTERNAL "vcpkg directory" FORCE)
+  message (AUTHOR_WARNING "Windows detected, adding vcpkg support.")
+  set (ENV{VCPKG_DISABLE_METRICS} 1)
+  add_custom_command (
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/windows/vcpkg/vcpkg.exe ${CMAKE_CURRENT_SOURCE_DIR}/windows/vcpkg/vcpkg.disable-metrics
+    COMMAND ./bootstrap-vcpkg.bat -disableMetrics DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/windows/vcpkg/bootstrap-vcpkg.bat
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/windows/vcpkg
+  )
+  add_custom_target (
+    vcpkg DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/windows/vcpkg/vcpkg.exe ${CMAKE_CURRENT_SOURCE_DIR}/windows/vcpkg/vcpkg.disable-metrics
+  )
+
+endif ()
+
+add_compile_options (-Wall)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  message (AUTHOR_WARNING "MSVC detected, adding specific options.")
+  add_compile_options (/permissive-)
+else ()
+  add_compile_options (-Wextra)
+endif ()
 
 # ##########################################################################################################################################
 # Options #####
@@ -31,8 +52,15 @@ option (DEBUG_SCORE "Dump score for debugging purpose" OFF)
 
 option (ENABLE_TESTING "enable unit-testing with Catch2" ON)
 
-option (ENABLE_SYSTEM_CATCH2 "Use system-provided Catch2 library" ON)
-option (ENABLE_SYSTEM_MATIO "Use system-provided MatIO library (unused for now)" ON)
+include (CMakeDependentOption)
+
+cmake_dependent_option (
+  ENABLE_SYSTEM_CATCH2
+  "Use system-provided Catch2 library"
+  ON
+  "NOT IS_WINDOWS"
+  OFF
+)
 
 # ##########################################################################################################################################
 
@@ -42,7 +70,7 @@ find_library (matio matio REQUIRED)
 find_file (matio_HEADER matio.h REQUIRED)
 get_filename_component (matio_INCLUDEDIR ${matio_HEADER} DIRECTORY CACHE)
 
-### Currently unused dependencies
+# ## Currently unused dependencies
 
 # find_package (Boost REQUIRED COMPONENTS program_options)
 
@@ -61,11 +89,11 @@ if (ENABLE_SYSTEM_CATCH2)
   endif ()
 else ()
   fetchcontent_declare (
-    Catch219
-    URL https://github.com/catchorg/Catch2/archive/refs/tags/v2.13.9.tar.gz
+    Catch219 URL https://github.com/catchorg/Catch2/archive/refs/tags/v2.13.9.tar.gz
     URL_HASH SHA256=06dbc7620e3b96c2b69d57bf337028bf245a211b3cddb843835bfe258f427a52
   )
-  fetchcontent_makeavailable (Catch219)
+  fetchcontent_populate (Catch219)
+  add_subdirectory(${catch219_SOURCE_DIR} ${catch219_BINARY_DIR} EXCLUDE_FROM_ALL)
   list (APPEND CMAKE_MODULE_PATH "${catch219_SOURCE_DIR}/contrib")
 endif ()
 
@@ -73,8 +101,6 @@ if (PROFILING)
   add_compile_definitions (WITHGPERFTOOLS)
   add_link_options (-lprofiler)
 endif ()
-
-add_compile_options (-Wall -Wextra)
 
 include (CheckCXXCompilerFlag)
 check_cxx_compiler_flag ("-march=native" MARCH)
@@ -118,44 +144,19 @@ if (DEBUG_SCORE)
   add_compile_definitions (DEBUG_LOG_SCORE=1)
 endif ()
 
-find_program (
-  mat_interpreter
-  NAMES matlab octave
-  PATHS /bin
-        /usr/bin
-        /usr/local/bin
-        QUIET
-)
+find_program (mat_interpreter NAMES matlab octave PATHS /bin /usr/bin /usr/local/bin QUIET)
 if (NOT mat_interpreter)
   message (STATUS "MATLAB/Octave interpreter not found. Test vectors will not be generated on-the-fly.")
 else ()
-  string (
-    REGEX MATCH
-          "/matlab$"
-          MAT_ITPR_TYPE
-          ${mat_interpreter}
-  )
+  string (REGEX MATCH "/matlab$" MAT_ITPR_TYPE ${mat_interpreter})
   if (MAT_ITPR_TYPE)
     if (NOT MATLAB_RELEASE)
       execute_process (COMMAND ${mat_interpreter} -nosplash -nojvm -batch "fprintf('%s', version())" OUTPUT_VARIABLE MATLAB_FUZZY)
-      string (
-        REGEX MATCH
-              "R20[1-9][0-9][ab]"
-              MATLAB_RELEASE_TMP
-              ${MATLAB_FUZZY}
-      )
-      set (
-        MATLAB_RELEASE
-        ${MATLAB_RELEASE_TMP}
-        CACHE INTERNAL "" FORCE
-      )
+      string (REGEX MATCH "R20[1-9][0-9][ab]" MATLAB_RELEASE_TMP ${MATLAB_FUZZY})
+      set (MATLAB_RELEASE ${MATLAB_RELEASE_TMP} CACHE INTERNAL "" FORCE)
       unset (MATLAB_RELEASE_TMP)
 
-      set (
-        mat_generator_args
-        "-nojvm;-nosplash;-batch"
-        CACHE INTERNAL ""
-      )
+      set (mat_generator_args "-nojvm;-nosplash;-batch" CACHE INTERNAL "")
 
       message (STATUS "Found MATLAB ${MATLAB_RELEASE} as ${mat_interpreter}.")
     endif ()
@@ -164,18 +165,10 @@ else ()
     if (NOT OCTAVE_VERSION)
       execute_process (COMMAND ${mat_interpreter} --eval "fprintf('%s', OCTAVE_VERSION)" OUTPUT_VARIABLE OCTAVE_VERSION_TMP)
 
-      set (
-        OCTAVE_VERSION
-        ${OCTAVE_VERSION_TMP}
-        CACHE INTERNAL "" FORCE
-      )
+      set (OCTAVE_VERSION ${OCTAVE_VERSION_TMP} CACHE INTERNAL "" FORCE)
       unset (OCTAVE_VERSION_TMP)
 
-      set (
-        mat_generator_args
-        "--no-gui;-f;-q;--eval"
-        CACHE INTERNAL ""
-      )
+      set (mat_generator_args "--no-gui;-f;-q;--eval" CACHE INTERNAL "")
 
       message (STATUS "Found Octave ${OCTAVE_VERSION} as  ${mat_interpreter}.")
     endif ()
@@ -183,30 +176,18 @@ else ()
 endif ()
 
 if (ENABLE_TESTING)
-  find_package (
-    Python
-    COMPONENTS Interpreter
-    REQUIRED
-  )
+  find_package (Python COMPONENTS Interpreter REQUIRED)
 endif ()
 
-include_directories (BEFORE sources ${matio_INCLUDEDIR})
+include_directories (${CMAKE_CURRENT_SOURCE_DIR}/sources ${matio_INCLUDEDIR})
 
 # ##########################################################################################################################################
 # target definitions
 # ##########################################################################################################################################
 # ##########################################################################################################################################
 
-set (
-  LIST_TARGET_Q
-  "64;128;256;512"
-  CACHE STRING "Value of q to test."
-)
-set (
-  LIST_TARGET_N
-  "60"
-  CACHE INTERNAL "" FORCE
-) # Currently not supported
+set (LIST_TARGET_Q "64;128;256;512" CACHE STRING "Value of q to test.")
+set (LIST_TARGET_N "60" CACHE INTERNAL "" FORCE) # Currently not supported
 set (LIST_TARGET_W "1") # Currently not supported
 
 if (ENABLE_TESTING)

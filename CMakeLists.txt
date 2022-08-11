@@ -17,19 +17,8 @@ project (QCSP_PASSED LANGUAGES CXX VERSION 0.1)
 # this sets the project name
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-  set (IS_WINDOWS ON CACHE INTERNAL "System is Windows" FORCE)
-  set (VCPKG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/windows/vcpkg CACHE INTERNAL "vcpkg directory" FORCE)
   message (AUTHOR_WARNING "Windows detected, adding vcpkg support.")
-  set (ENV{VCPKG_DISABLE_METRICS} 1)
-  add_custom_command (
-    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/windows/vcpkg/vcpkg.exe ${CMAKE_CURRENT_SOURCE_DIR}/windows/vcpkg/vcpkg.disable-metrics
-    COMMAND ./bootstrap-vcpkg.bat -disableMetrics DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/windows/vcpkg/bootstrap-vcpkg.bat
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/windows/vcpkg
-  )
-  add_custom_target (
-    vcpkg DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/windows/vcpkg/vcpkg.exe ${CMAKE_CURRENT_SOURCE_DIR}/windows/vcpkg/vcpkg.disable-metrics
-  )
-
+  add_subdirectory (windows)
 endif ()
 
 add_compile_options (-Wall)
@@ -207,40 +196,7 @@ if (ENABLE_TESTING)
   add_library (catch_common_${PROJECT_NAME} OBJECT sources/testing/main_catch2.cpp)
   target_link_libraries (catch_common_${PROJECT_NAME} PUBLIC Catch2::Catch2)
 
-  configure_file (data/generator_script.m.in ${CMAKE_CURRENT_SOURCE_DIR}/data/generator_script.m)
-
-  foreach (TARGET_Q ${LIST_TARGET_Q})
-    foreach (TARGET_N ${LIST_TARGET_N})
-      foreach (TARGET_W ${LIST_TARGET_W})
-        set (local_filename "test_data_q${TARGET_Q}_N${TARGET_N}_w${TARGET_W}_step0_span0.0.mat")
-
-        configure_file (data/data_generator_qXX_NXX_wXX_step0_0pi_1.m.in ${CMAKE_CURRENT_SOURCE_DIR}/data/data_generator_q${TARGET_Q}_N${TARGET_N}_w${TARGET_W}_step0_0pi_1.m)
-
-        # If MATLAB or Octave have been found, generate test vectors. Just create dummy dependencies otherwise.
-        if ((OCTAVE_VERSIONS OR MATLAB_RELEASES) AND ENABLE_DATA_AUTOGENERATION)
-          add_custom_command (
-            OUTPUT ${CMAKE_SOURCE_DIR}/data/${local_filename}
-            COMMAND
-              ${mat_interpreter} ${mat_generator_args}
-              "PN = double(load('pn_sequences.mat').PN${TARGET_Q}); best_N = load('parameters_20210903.mat').best_N; fnm = save_test_vectors(PN, best_N, 0, 1, 0, 0); fprintf('%s generated.\\n', fnm)"
-            DEPENDS ${CMAKE_SOURCE_DIR}/data/save_test_vectors.m
-                    ${CMAKE_SOURCE_DIR}/data/compute_ts_score.m
-                    ${CMAKE_SOURCE_DIR}/data/generate_noisy_sequence.m
-                    ${CMAKE_SOURCE_DIR}/data/corr_abs_max.m
-                    ${CMAKE_SOURCE_DIR}/data/pn_sequences.mat
-                    ${CMAKE_SOURCE_DIR}/data/parameters_20210903.mat
-            USES_TERMINAL
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/data
-            VERBATIM
-          )
-        endif ()
-
-        add_custom_target (gen_data_q${TARGET_Q}_N${TARGET_N}_w${TARGET_W} DEPENDS ${CMAKE_SOURCE_DIR}/data/${local_filename})
-        unset (${local_filename})
-      endforeach ()
-    endforeach ()
-  endforeach ()
-
+  add_subdirectory (data)
 endif ()
 
 add_subdirectory (sources/CDetector)

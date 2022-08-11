@@ -7,7 +7,16 @@ list_W = [@LIST_TARGET_W@]';
 for q = list_q
   for N = list_N
     for w = list_W
+        display(sprintf("Running data_generator_q%i_N%i_w%i_step0_0pi_1 ...", q, N, w));
         run(sprintf("data_generator_q%i_N%i_w%i_step0_0pi_1", q, N, w))
     end
   end
 end
+
+load('parameters_20210903.mat', 'PN64', 'best_N');
+display("Generating for q = 64, w = 34 ...");
+fn_34_8 = save_test_vectors(PN64, best_N, pi * 2, 34, 8, 0);
+fprintf("File %s written\n", fn_34_8);
+display("Generating for q = 64, w = 4 ...");
+fn_4_4 = save_test_vectors(PN64, best_N, pi / 2, 4, 4, 0);
+fprintf("File %s written\n", fn_4_4);

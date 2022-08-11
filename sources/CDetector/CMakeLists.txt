@@ -26,7 +26,7 @@ if (ENABLE_TESTING)
   )
   target_link_libraries (detector_tests PUBLIC detectors catch_common_${PROJECT_NAME} ${matio})
 
-  add_dependencies (detector_tests ${LIST_DETECTOR_DEP})
+  add_dependencies (detector_tests gen_data_q64_N60_w4 gen_data_q64_N60_w34 ${LIST_DETECTOR_DEP})
 
   catch_discover_tests (detector_tests WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 

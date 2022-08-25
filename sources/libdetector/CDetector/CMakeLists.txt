@@ -1,6 +1,7 @@
 add_subdirectory (CScoreProcessor)
 
 add_library (detectors OBJECT CDetector.cpp)
+target_include_directories(detectors PUBLIC ${LIB_ROOT_DIRECTORY})
 target_link_libraries (detectors PUBLIC score_processor)
 
 if (ENABLE_TESTING)

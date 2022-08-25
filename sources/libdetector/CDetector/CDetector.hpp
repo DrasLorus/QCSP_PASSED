@@ -25,7 +25,7 @@ struct DetectionState {
     uint32_t frequency_index;  // The index of the frequency offset in the frequency array
 };
 
-template <unsigned TFrameSize, unsigned Tq, unsigned Tp_omega, typename TIn_Type = float, bool normed = true>
+template <unsigned TFrameSize, unsigned Tq, unsigned Tp_omega, typename TIn_Type = float, bool normed = true, CorrelationEngineType variant = TIME_SLIDING>
 class CDetector {
 protected:
     using state_t = DetectionState<TIn_Type, TIn_Type, Tp_omega>;
@@ -37,8 +37,8 @@ public:
     virtual ~CDetector() = default;
 };
 
-template <unsigned TFrameSize, unsigned Tq, unsigned Tp_omega, typename TIn_Type = float, bool normed = true>
-class CDetectorSerial : public CDetector<TFrameSize, Tq, Tp_omega, TIn_Type, normed> {
+template <unsigned TFrameSize, unsigned Tq, unsigned Tp_omega, typename TIn_Type = float, bool normed = true, CorrelationEngineType variant = TIME_SLIDING>
+class CDetectorSerial : public CDetector<TFrameSize, Tq, Tp_omega, TIn_Type, normed, variant> {
     static_assert(is_pow2(Tq), "q must be a power of 2");
 
 public:
@@ -52,7 +52,7 @@ private:
     using base = CDetector<N, q, p_omega, TIn_Type, normed>;
     using typename base::state_t;
 
-    using score_proc_t = CScoreProcessor<N, q, TIn_Type, normed>;
+    using score_proc_t = CScoreProcessor<N, q, TIn_Type, normed, variant>;
 
     std::vector<score_proc_t> score_processors;
 

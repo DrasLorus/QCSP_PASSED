@@ -199,4 +199,6 @@ if (ENABLE_TESTING)
   add_subdirectory (data)
 endif ()
 
-add_subdirectory (sources/CDetector)
+# Create the 'detector' target
+add_subdirectory (sources/libdetector)
+add_subdirectory (sources/simulators)

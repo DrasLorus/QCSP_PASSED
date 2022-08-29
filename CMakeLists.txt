@@ -200,5 +200,5 @@ if (ENABLE_TESTING)
 endif ()
 
 # Create the 'detector' target
-add_subdirectory (sources/libdetector)
+add_subdirectory (sources/libdetectors)
 add_subdirectory (sources/simulators)

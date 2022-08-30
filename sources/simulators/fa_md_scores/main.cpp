@@ -11,6 +11,11 @@
 
 #include "./config.h"
 
+#if defined(HAVE_UNISTD_H) && (HAVE_UNISTD_H == 1)
+#include <libgen.h>
+#include <unistd.h>
+#endif
+
 using std::string;
 
 namespace po = boost::program_options;
@@ -28,8 +33,6 @@ using std::endl;
 #else
 #define debug_print(info) assert(true)
 #endif
-
-#define DEFAULT_SCORE_FILE "score_fa_md_ts_snr<snr>_p<p_delta>_w<p_omega>_step<num>_<den>_span<span>.mat"
 
 int main(int argc, char * argv[]) {
 

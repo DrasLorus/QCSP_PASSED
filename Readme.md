@@ -22,7 +22,7 @@ be automatically fetched by CMake if `ENABLE_SYSTEM_CATCH2` is set to `OFF`.
 ### Exemple (On Archlinux)
 
 ```bash
-sudo pacman -Syu base-devel cmake boost boost-libs libmatio catch2 git --needed
+sudo pacman -Syu base-devel cmake boost boost-libs libmatio catch2 python git --needed
 
 git clone <url.git> QCSP_PASSED
 cd QCSP_PASSED
@@ -35,8 +35,8 @@ cmake --build build -j 4
 ### Exemple with automatic fetch (On Ubuntu 20.04)
 
 ```bash
-sudo apt update
-sudo apt upgrade -Syu build-essential cmake libboost-program-options-dev libmatio-dev git -y
+sudo apt update && sudo apt upgrade
+sudo apt install build-essential cmake libboost-program-options-dev libmatio-dev python3 git
 
 git clone <url.git> QCSP_PASSED
 cd QCSP_PASSED

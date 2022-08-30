@@ -1,19 +1,8 @@
-#ifndef CONFIG_H
-#define CONFIG_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#ifndef _QCSP_PASSED_FA_MD_CONFIG_H_
+#define _QCSP_PASSED_FA_MD_CONFIG_H_
 
 #cmakedefine HAVE_UNISTD_H 1
 
-#if defined(HAVE_UNISTD_H) && (HAVE_UNISTD_H == 1)
-#include <unistd.h>
-#include <libgen.h>
-#endif
+#define DEFAULT_SCORE_FILE "score_fa_md_ts_<normed>_snr<snr>_p<p_delta>_w<p_omega>_step<num>_<den>_span<span>.mat"
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+#endif // _QCSP_PASSED_FA_MD_CONFIG_H_

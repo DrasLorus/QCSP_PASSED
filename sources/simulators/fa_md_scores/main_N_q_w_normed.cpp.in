@@ -23,6 +23,8 @@
 #include <matio.h>
 #include <omp.h>
 
+#include "config.h"
+
 using std::complex;
 using std::string;
 using std::vector;
@@ -50,8 +52,6 @@ using std::endl;
 
 #define MD false
 #define FA true
-
-#define DEFAULT_SCORE_FILE "score_fa_md_ts_snr<snr>_p<p_delta>_w<p_omega>_step<num>_<den>_span<span>.mat"
 
 /*********************************************/
 /* Constants Definitions *********************/
@@ -342,8 +342,8 @@ int main(int argc, char * argv[]) {
     string output_path = vm["output-file"].as<string>();
     if (output_path == DEFAULT_SCORE_FILE) {
         std::ostringstream os;
-        os << "score_fa_md_ts_snr"
-           << std::setprecision(5) << snr
+        os << "score_fa_md_ts_" << (normed ? "normed" : "raw")
+           << "_snr" << std::setprecision(5) << snr
            << "_p" << 64
            << "_w" << cst_p_omega
            << "_step1_" << step_denominator

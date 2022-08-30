@@ -17,6 +17,12 @@
 #include "./init.hpp"
 #include "./tools.hpp"
 
+#define exit_if(condition)               \
+    if (condition) {                     \
+        perror("Failed in system call"); \
+        exit(EXIT_FAILURE);              \
+    }
+
 /*!
  * \fn Table_Add_GF
  * \brief Compute the addition table in GF(q)
@@ -152,9 +158,9 @@ void LoadCode(const std::string & alist_file, code_t & code) {
 
     int32_t N, M, q;
 
-    fscanf(f, "%d", &N);
-    fscanf(f, "%d", &M);
-    fscanf(f, "%d", &q);
+    exit_if(fscanf(f, "%d", &N) != 1);
+    exit_if(fscanf(f, "%d", &M) != 1);
+    exit_if(fscanf(f, "%d", &q) != 1);
     code.N    = N;
     code.M    = M;
     code.q    = q;
@@ -164,12 +170,12 @@ void LoadCode(const std::string & alist_file, code_t & code) {
 
     code.columnDegrees.resize(N);
     for (int32_t n = 0; n < N; n++) {
-        fscanf(f, "%d", code.columnDegrees.data() + n);
+        exit_if(fscanf(f, "%d", code.columnDegrees.data() + n) != 1);
     }
 
     code.rowDegrees.resize(M);
     for (int32_t m = 0; m < M; m++) {
-        fscanf(f, "%d", code.rowDegrees.data() + m);
+        exit_if(fscanf(f, "%d", code.rowDegrees.data() + m) != 1);
     }
 
     code.node_matrix.resize(M);
@@ -182,7 +188,7 @@ void LoadCode(const std::string & alist_file, code_t & code) {
     for (int32_t m = 0; m < M; m++) {
         for (int32_t k = 0; k < code.rowDegrees[m]; k++) {
             int32_t temp_node, temp_coef;
-            fscanf(f, "%d %d", &temp_node, &temp_coef);
+            exit_if(fscanf(f, "%d %d", &temp_node, &temp_coef) != 2);
             code.node_matrix[m][k]  = temp_node - 1;
             code.coefficients[m][k] = temp_coef + 1;
         }

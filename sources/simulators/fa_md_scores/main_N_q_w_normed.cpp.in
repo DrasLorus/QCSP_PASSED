@@ -321,13 +321,15 @@ int main(int argc, char * argv[]) {
     }
 
     const int runs           = vm["runs"].as<int>() * int(vm["runs"].as<int>() > 0);
-    const int run_length     = generators[0].run_length();
     const int run_per_thread = int(ceilf(float(runs) / float(threads)));
 
     constexpr int frame_size = cst_N * cst_q;
+    constexpr int run_length = cst_N * cst_q * 5;
 
-    constexpr int max_batch_size = 100 * (1 << (10 * 2)) / sizeof(float);
-    const int     batch_size     = std::min(max_batch_size, run_per_thread);
+    constexpr int64_t max_batch_size = (1 << (10 * 3)) / sizeof(float);
+
+    const int max_batch_thread = int(ceilf(float(max_batch_size) / float(threads)));
+    const int batch_size       = std::min(max_batch_thread, run_per_thread);
 
     vector<unsigned> inner_counters(threads, 0U);
 

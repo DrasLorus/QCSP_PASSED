@@ -13,6 +13,7 @@
 
 #if defined(HAVE_UNISTD_H) && (HAVE_UNISTD_H == 1)
 #include <libgen.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #endif
 
@@ -130,27 +131,41 @@ int main(int argc, char * argv[]) {
 
     const string threads_str = std::to_string(threads);
 
-    const int result = execl(
-        program_path.c_str(),
-        program_name.c_str(),
-        "--snr", snr_str.c_str(),
-        "--runs", runs_str.c_str(),
-        "--pn-file", pn_abs_path.c_str(),
-        "--ovmod-file", ovmod_abs_path.c_str(),
-        "--alist-file", alist_abs_path.c_str(),
-        "--threads", threads_str.c_str(),
-        (full_score ? "--full-score" : ""),
-        "--output-file", output_path.c_str(),
-        (char *) NULL);
+    const pid_t pid = fork();
+    if (pid == 0) {
+        const int result = execl(
+            program_path.c_str(),
+            program_name.c_str(),
+            "--snr", snr_str.c_str(),
+            "--runs", runs_str.c_str(),
+            "--pn-file", pn_abs_path.c_str(),
+            "--ovmod-file", ovmod_abs_path.c_str(),
+            "--alist-file", alist_abs_path.c_str(),
+            "--threads", threads_str.c_str(),
+            (full_score ? "--full-score" : ""),
+            "--output-file", output_path.c_str(),
+            (char *) NULL);
 
-    if (result != 0) {
-        error_stream << "Failed to execute " << program_name << ": "
-                     << (errno == ENOENT ? "Unsupported N, q or p_omega. Check CMake configuration." : strerror(errno))
-                     << endl;
+        if (result != 0) {
+            error_stream << "Failed to execute " << program_name << ": "
+                         << (errno == ENOENT ? "Unsupported N, q or p_omega. Check CMake configuration." : strerror(errno))
+                         << endl;
+            exit(EXIT_FAILURE);
+        }
+    } else if (pid > 0) {
+        int result;
+
+        const pid_t child_pid = wait(&result);
+        (void) child_pid; // Currently unused
+
+        if (result != EXIT_SUCCESS) {
+            error_stream << "Unknown error occured in " << program_name << " (" << (int) child_pid << ") with code " << result << endl;
+            exit(EXIT_FAILURE);
+        }
+    } else {
+        perror("Failed to fork the process.");
         exit(EXIT_FAILURE);
     }
-
 #endif
-
-    return result;
+    return EXIT_SUCCESS;
 }

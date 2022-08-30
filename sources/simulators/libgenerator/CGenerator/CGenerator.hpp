@@ -2,10 +2,12 @@
 #define _QCSP_PASSED_CGENERATOR_HPP_
 
 #include <complex>
+#include <cstdio>
 #include <random>
 #include <string>
 #include <vector>
 
+#include "CGenerator/nbldpc_functions/tools.hpp"
 #include "Miscellanous/misc.hpp"
 
 #include "./nbldpc_functions/nbldpc_wrapper.hpp"
@@ -71,16 +73,16 @@ private:
                    vector<bool> &        delayed_frame) const; // Add delay to the frame, if any
     void add_bpsk_phase_rotation(const vector<bool> &  delayed_frame,
                                  const frame_param_t & param,
-                                 vector<complexf>      rotated_frame) const; // Add BPSK + add phase and rotation if any
+                                 vector<complexf> &    rotated_frame) const; // Add BPSK + add phase and rotation if any
 
-    void add_noise(const vector<complexf> rotated_sequence, vector<complexf> noisy_sequence); // Generate and add white Gaussian noise
+    void add_noise(const vector<complexf> & rotated_sequence, vector<complexf> & noisy_sequence); // Generate and add white Gaussian noise
 
 public:
     inline int32_t N() const { return code.N; }
     inline int32_t K() const { return code.K; }
     inline int32_t M() const { return code.M; }
     inline int32_t q() const { return code.q; }
-    inline int32_t p() const { return code.q; }
+    inline int32_t p() const { return code.p; }
     inline int32_t frame_size() const { return code.N * code.q; }
     inline int32_t run_length() const { return code.N * code.q * 5; }
 
@@ -114,8 +116,9 @@ public:
           distr_noise(0, _sigma) {
 
         //* First, load the alist !!
-        ::LoadCode(_alist_file.c_str(), code);
-        ::LoadTables(table, code.q, code.p);
+        LoadCode(_alist_file.c_str(), code);
+        LoadTables(table, code.q, code.p);
+        GaussianElimination(table, code);
 
         _pn = vector<bool>(code.q);
         for (int i = 0; i < code.q; i++) {

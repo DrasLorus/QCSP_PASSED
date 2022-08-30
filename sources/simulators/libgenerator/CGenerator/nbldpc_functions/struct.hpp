@@ -65,7 +65,7 @@ typedef struct {
  * \brief Computation tables in GF(q)
  */
 typedef struct {
-    vector<vector<bool>> BINGF;  // Mapping symbol GF(q) -> binary representation of GF symbols
+    vector<vector<bool>>    BINGF;  // Mapping symbol GF(q) -> binary representation of GF symbols
     vector<vector<int32_t>> ADDGF;  // Addition table in GF(q)
     vector<vector<int32_t>> MULGF;  // Multiplication table in GF(q)
     vector<vector<int32_t>> DIVGF;  // Division table in GF(q)

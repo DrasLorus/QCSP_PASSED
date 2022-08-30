@@ -27,10 +27,9 @@ struct DetectionState {
 
 template <unsigned TFrameSize, unsigned Tq, unsigned Tp_omega, typename TIn_Type = float, bool normed = true, CorrelationEngineType variant = TIME_SLIDING>
 class CDetector {
-protected:
+public:
     using state_t = DetectionState<TIn_Type, TIn_Type, Tp_omega>;
 
-public:
     virtual void process(TIn_Type re_in, TIn_Type im_in, state_t * state)     = 0;
     virtual void process_sqr(TIn_Type re_in, TIn_Type im_in, state_t * state) = 0;
 
@@ -46,12 +45,12 @@ public:
     static constexpr unsigned N       = TFrameSize;
     static constexpr unsigned p_omega = Tp_omega;
 
-    static constexpr uint64_t window_size = N * q;
-
-private:
     using base = CDetector<N, q, p_omega, TIn_Type, normed>;
     using typename base::state_t;
 
+    static constexpr uint64_t window_size = N * q;
+
+private:
     using score_proc_t = CScoreProcessor<N, q, TIn_Type, normed, variant>;
 
     std::vector<score_proc_t> score_processors;

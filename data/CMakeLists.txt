@@ -39,8 +39,7 @@ set (local_filename "test_data_q64_N60_w4_step4_span0.5.mat")
 if ((OCTAVE_VERSION OR MATLAB_RELEASE) AND ENABLE_DATA_AUTOGENERATION)
   add_custom_command (
     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${local_filename}
-    COMMAND
-      ${mat_interpreter} ${mat_generator_args} "data_generator_q64_N60_w4_step4_1pi_2"
+    COMMAND ${mat_interpreter} ${mat_generator_args} "data_generator_q64_N60_w4_step4_1pi_2"
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/save_test_vectors.m
             ${CMAKE_CURRENT_SOURCE_DIR}/compute_ts_score.m
             ${CMAKE_CURRENT_SOURCE_DIR}/generate_noisy_sequence.m
@@ -61,8 +60,7 @@ set (local_filename "test_data_q64_N60_w34_step8_span2.0.mat")
 if ((OCTAVE_VERSION OR MATLAB_RELEASE) AND ENABLE_DATA_AUTOGENERATION)
   add_custom_command (
     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${local_filename}
-    COMMAND
-      ${mat_interpreter} ${mat_generator_args} "data_generator_q64_N60_w34_step8_2pi_1"
+    COMMAND ${mat_interpreter} ${mat_generator_args} "data_generator_q64_N60_w34_step8_2pi_1"
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/save_test_vectors.m
             ${CMAKE_CURRENT_SOURCE_DIR}/compute_ts_score.m
             ${CMAKE_CURRENT_SOURCE_DIR}/generate_noisy_sequence.m

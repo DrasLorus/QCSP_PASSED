@@ -106,3 +106,4 @@ data/*.dat
 data/*.mat
 data/data_generator_q*_N*_w1_step0_0pi_1.m
 data/generator_script.m
+sources/simulators/fa_md_scores/config.h

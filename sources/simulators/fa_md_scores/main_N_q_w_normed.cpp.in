@@ -1,0 +1,557 @@
+#include "CDetector/CDetector.hpp"
+#include "CGenerator/CGenerator.hpp"
+#include "Miscellanous/misc.hpp"
+
+#include <algorithm>
+#include <atomic>
+#include <cassert>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <fstream>
+#include <iomanip>
+#include <ios>
+#include <iostream>
+#include <new>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+#include <boost/program_options.hpp>
+#include <matio.h>
+#include <omp.h>
+
+using std::complex;
+using std::string;
+using std::vector;
+
+using complexf = complex<float>;
+
+namespace po = boost::program_options;
+
+using namespace QCSP::StandaloneDetector;
+using namespace QCSP::StandaloneDetector::Simulators;
+
+using std::cerr;
+using std::cout;
+using std::endl;
+
+#define error_stream   cerr << "\033[31;1m[Error]\033[0m "
+#define warning_stream cerr << "\033[33;1m[Warning]\033[0m "
+#define info_stream    cerr << "\033[34;1m[INFO]\033[0m "
+
+#ifndef NDEBUG
+#define debug_print(info) cerr << "\033[35;1m[DEBUG]\033[0m " << info << endl
+#else
+#define debug_print(info) assert(true)
+#endif
+
+#define MD false
+#define FA true
+
+#define DEFAULT_SCORE_FILE "score_fa_md_ts_snr<snr>_p<p_delta>_w<p_omega>_step<num>_<den>_span<span>.mat"
+
+/*********************************************/
+/* Constants Definitions *********************/
+/*********************************************/
+static constexpr int  cst_q       = @TARGET_Q@;
+static constexpr int  cst_N       = @TARGET_N@;
+static constexpr int  cst_p_omega = @TARGET_W@;
+static constexpr bool normed      = @TARGET_NORMED@;
+
+/*********************************************/
+/* Constants Deductions *********************/
+/*********************************************/
+static constexpr float rotation_span    = two_pi_f;
+static constexpr int   step_denominator = int(pi_f / float(rotation_span) * float(cst_p_omega));
+
+static constexpr CorrelationEngineType correngine = TIME_SLIDING;
+
+using detector_t = CDetectorSerial<cst_N, cst_q, cst_p_omega, float, normed, correngine>;
+using state_t    = detector_t::state_t;
+
+/*********************************************/
+/* Function Definitions *********************/
+/*********************************************/
+
+template <typename T1, typename T2>
+static void progressBar(T1 i, T2 max) {
+    const double progress = double(i) / double(max);
+    const size_t barWidth = 60;
+    const size_t pos      = barWidth * progress;
+
+    cout << "[";
+    for (size_t i = 0; i < barWidth; ++i) {
+        if (i < pos)
+            cout << "=";
+        else if (i == pos)
+            cout << ">";
+        else
+            cout << " ";
+    }
+    cout << "] " << size_t(progress * 100.0) << " % \r";
+    cout.flush();
+}
+
+static void write_score_fa(const vector<float> & score, mat_t * score_mat) {
+    size_t dims[2] = {1U, score.size()};
+
+    matvar_t * score_fa_var = Mat_VarCreate(
+        "score_fa",
+        MAT_C_SINGLE, MAT_T_SINGLE,
+        2, dims,
+        (void *) score.data(),
+        0);
+    if (!bool(score_fa_var)) {
+        throw std::runtime_error("Failed to create a new variable score_fa");
+    }
+
+    const int result = Mat_VarWriteAppend(score_mat, score_fa_var, MAT_COMPRESSION_ZLIB, 2);
+    Mat_VarFree(score_fa_var);
+
+    if (result != 0) {
+        throw std::runtime_error("Failed to append score_fa variable to the matfile.\nFailed with code " + std::to_string(result) + ".");
+    }
+}
+
+static void write_score_md(const vector<float> & score, mat_t * score_mat) {
+    size_t dims[2] = {1U, score.size()};
+
+    matvar_t * score_md_var = Mat_VarCreate(
+        "score_md",
+        MAT_C_SINGLE, MAT_T_SINGLE,
+        2, dims,
+        (void *) score.data(),
+        0);
+    if (!bool(score_md_var)) {
+        throw std::runtime_error("Failed to create a new variable score_md");
+    }
+
+    const int result = Mat_VarWriteAppend(score_mat, score_md_var, MAT_COMPRESSION_ZLIB, 2);
+    Mat_VarFree(score_md_var);
+
+    if (result != 0) {
+        throw std::runtime_error("Failed to append score_md variable to the matfile.\nFailed with code " + std::to_string(result) + ".");
+    }
+}
+
+static void write_full_score(const vector<vector<float>> & scores, mat_t * score_mat) {
+    size_t dims[2] = {scores[0].size(), scores.size()};
+
+    float * lin_scores = new float[dims[0] * dims[1]];
+    for (int i = 0; i < int(scores.size()); i++) {
+        memcpy(lin_scores + i * scores[0].size(), scores[i].data(), scores[0].size() * sizeof(float));
+    }
+
+    matvar_t * score_var = Mat_VarCreate(
+        "score_full",
+        MAT_C_SINGLE, MAT_T_SINGLE,
+        2, dims,
+        (void *) lin_scores,
+        0);
+    if (!bool(score_var)) {
+        throw std::runtime_error("Failed to create a new variable score_full");
+    }
+
+    const int result = Mat_VarWriteAppend(score_mat, score_var, MAT_COMPRESSION_ZLIB, 2);
+    Mat_VarFree(score_var);
+    delete[] lin_scores;
+    if (result != 0) {
+        throw std::runtime_error("Failed to append score_full variable to the matfile.\nFailed with code " + std::to_string(result) + ".");
+    }
+}
+
+// static void write_full_score(const vector<vector<float>> & scores, FILE * score_file) {
+//     for (const auto & score : scores) {
+//         for (const auto & value : score) {
+//             fprintf(score_file, "%-16f", value);
+//         }
+//         fprintf(score_file, "\n");
+//     }
+// }
+
+int main(int argc, char * argv[]) {
+    static_assert(cst_p_omega > 0, "p_omega cannot be null.");
+    static_assert(is_pow2(cst_q), "q must be a power of 2.");
+    static_assert(cst_N == 60, "cst_N must be 60.");
+
+    po::options_description desc("Options");
+    desc.add_options()(
+        "help,h", "produce help message")(
+        "snr,s", po::value<float>()->default_value(-10.f), "targeted signal-to-noise ratio")(
+        "runs,n", po::value<int>()->default_value(10), "number of monte-carlo runs")(
+        "pn-file", po::value<string>()->required(), "pn sequence mat file to use")(
+        "ovmod-file", po::value<string>()->required(), "overmodulation sequence file to use")(
+        "alist-file", po::value<string>()->required(), "alist file to use")(
+        "threads,t", po::value<int>()->default_value(1), "number of threads to use")(
+        "full-score", "log the full score instead of only the maximum one (WARNING: LARGE FILES AND HEAVY PERFORMANCE IMPACT)")(
+        "output-file,o", po::value<string>()->default_value(DEFAULT_SCORE_FILE), "score file to write");
+
+    po::variables_map vm;
+    try {
+        po::store(po::command_line_parser(argc, argv)
+                      .options(desc)
+                      .run(),
+                  vm);
+
+        if (vm.count("help")) {
+            std::cout << "Usage: " << argv[0] << " [options]\n"
+                      << desc << std::endl;
+            return 1;
+        }
+
+        po::notify(vm);
+    } catch (std::exception & e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
+    const float snr = vm["snr"].as<float>();
+    // const int   runs = vm["runs"].as<int>();
+
+    const int threads = std::max(vm["threads"].as<int>(), 1);
+
+    // const int p_delta = vm["p_delta"].as<int>();
+
+    const string alist_path = vm["alist-file"].as<string>();
+
+    FILE * alist_file = fopen(alist_path.c_str(), "r");
+    if (!bool(alist_file)) {
+        error_stream << "Can't open alist file " << alist_path << "\n  "
+                     << strerror(errno) << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    int       N, M, q;
+    const int nmq_read = fscanf(alist_file, "%d %d %d", &N, &M, &q);
+    if (nmq_read != 3) {
+        error_stream << "Alist file " << alist_path << " seems ill-formed:\n"
+                     << "  Failed to read \"N M q\" from it." << endl;
+        fclose(alist_file);
+        exit(EXIT_FAILURE);
+    }
+
+    fclose(alist_file);
+
+    if (q != cst_q) {
+        error_stream << "q value (" << q
+                     << ") is not currently the one the program have been compiled for (" << cst_q << ").\n"
+                     << "You may have to reconfigure and rebuild the project to fix that." << std::endl;
+        return 1;
+    }
+
+    if (N != cst_N) {
+        error_stream << "N value (" << N
+                     << ") is not currently the one the program have been compiled for (" << cst_N << ").\n"
+                     << "You may have to reconfigure and rebuild the project to fix that." << std::endl;
+        return 1;
+    }
+
+    const string pn_path = vm["pn-file"].as<string>();
+    mat_t *      pn_file = Mat_Open(pn_path.c_str(), MAT_ACC_RDONLY);
+    if (!bool(pn_file)) {
+        error_stream << "Can't open pn mat file " << pn_path << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    const string pn_name = "PN" + std::to_string(cst_q);
+    matvar_t *   pn_var  = Mat_VarRead(pn_file, pn_name.c_str());
+    if (!bool(pn_var)) {
+        error_stream << "Can't find pn mat variable " << pn_name << " in " << pn_path << endl;
+        Mat_Close(pn_file);
+        exit(EXIT_FAILURE);
+    }
+
+    const float * pn_data = (float *) pn_var->data;
+    const size_t  pn_size = pn_var->dims[1];
+
+    if (pn_size != size_t(q)) {
+        error_stream << "alist q (" << q << ") and size of "
+                     << pn_name << " in " << pn_path << " (" << pn_size << ") don't match." << endl;
+        Mat_VarFree(pn_var);
+        Mat_Close(pn_file);
+        exit(EXIT_FAILURE);
+    }
+
+    const vector<float> pn(pn_data, pn_data + cst_q);
+
+    Mat_VarFree(pn_var);
+    Mat_Close(pn_file);
+
+    const string ovmod_path = vm["ovmod-file"].as<string>();
+    mat_t *      ovmod_file = Mat_Open(ovmod_path.c_str(), MAT_ACC_RDONLY);
+    if (!bool(ovmod_file)) {
+        error_stream << "Can't open ovmod mat file " << ovmod_path << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    const string ovmod_name = "best_N";
+    matvar_t *   ovmod_var  = Mat_VarRead(ovmod_file, ovmod_name.c_str());
+    if (!bool(ovmod_var)) {
+        error_stream << "Can't find ovmod mat variable " << ovmod_name << " in " << ovmod_path << endl;
+        Mat_Close(ovmod_file);
+        exit(EXIT_FAILURE);
+    }
+
+    const double * ovmod_data = (double *) ovmod_var->data;
+    const size_t   ovmod_size = ovmod_var->dims[1];
+
+    if (ovmod_size != size_t(N)) {
+        error_stream << "alist N (" << N << ") and size of "
+                     << ovmod_name << " in " << ovmod_path << " (" << ovmod_size << ") don't match." << endl;
+        Mat_VarFree(ovmod_var);
+        Mat_Close(ovmod_file);
+        exit(EXIT_FAILURE);
+    }
+
+    const vector<float> ovmod(ovmod_data, ovmod_data + N);
+
+    Mat_VarFree(ovmod_var);
+    Mat_Close(ovmod_file);
+
+    vector<CGenerator> generators;
+    for (int t = 0; t < threads; t++) {
+        generators.emplace_back(alist_path, pn, ovmod, snr, rotation_span);
+    }
+
+    vector<detector_t> detectors;
+    for (int t = 0; t < threads; t++) {
+        detectors.emplace_back(pn.data(), 450, step_denominator);
+    }
+
+    const int runs           = vm["runs"].as<int>() * int(vm["runs"].as<int>() > 0);
+    const int run_length     = generators[0].run_length();
+    const int run_per_thread = int(ceilf(float(runs) / float(threads)));
+
+    constexpr int frame_size = cst_N * cst_q;
+
+    constexpr int max_batch_size = 100 * (1 << (10 * 2)) / sizeof(float);
+    const int     batch_size     = std::min(max_batch_size, run_per_thread);
+
+    vector<unsigned> inner_counters(threads, 0U);
+
+    vector<vector<float>> inner_memories(
+        threads,
+        vector<float>(
+            batch_size,
+            0.f));
+
+    const bool full_score = vm.count("full-score");
+
+    string output_path = vm["output-file"].as<string>();
+    if (output_path == DEFAULT_SCORE_FILE) {
+        std::ostringstream os;
+        os << "score_fa_md_ts_snr"
+           << std::setprecision(5) << snr
+           << "_p" << 64
+           << "_w" << cst_p_omega
+           << "_step1_" << step_denominator
+           << "_span" << std::setprecision(5) << rotation_span / pi_f
+           << ".mat";
+
+        output_path = os.str();
+    }
+
+    mat_t * score_mat = Mat_Open(output_path.c_str(), MAT_ACC_RDWR);
+    if (!bool(score_mat)) {
+        warning_stream << "Can't open score mat file " << output_path << " for writing. Trying to create it..." << endl;
+        score_mat = Mat_CreateVer(output_path.c_str(), nullptr, MAT_FT_MAT73);
+        if (!bool(score_mat)) {
+            error_stream << "Can't create the score mat file " << output_path << " for writing. terminating..." << endl;
+            exit(EXIT_FAILURE);
+        }
+
+        info_stream << "File " << output_path << " created." << endl;
+    }
+
+    omp_lock_t lock_file;
+    omp_init_lock(&lock_file);
+
+    omp_lock_t lock_out;
+    omp_init_lock(&lock_out);
+    std::atomic_ullong runs_done(0);
+
+#pragma omp parallel num_threads(threads) if ((threads > 1) && !full_score) shared(score_mat)
+    {
+
+#pragma omp single
+        {
+            info_stream << "Launching `Miss Detection` scenario." << endl;
+        }
+
+#pragma omp for
+        for (int i = 0; i < runs; i++) {
+            const int thread_id = omp_get_thread_num();
+
+            vector<complexf> noisy_sequence;
+            vector<float>    max_scores(run_length);
+
+            vector<vector<float>> score_full(run_length, vector<float>(cst_p_omega));
+
+            state_t state {};
+            state.frame_detected      = false;
+            state.max_found           = false;
+            state.max_score           = 0.f;
+            state.frequency_offset    = 0.f;
+            state.frequency_index     = 0;
+            state.chip_from_max       = 0;
+            state.chip_since_last_det = 0;
+            std::memset(state.scores, 0, cst_p_omega * sizeof(float));
+
+            generators[thread_id].generate<MD>(noisy_sequence);
+
+            for (int chip = 0; chip < run_length; chip++) {
+                const float re_in = noisy_sequence[chip].real();
+                const float im_in = noisy_sequence[chip].imag();
+
+                detectors[thread_id].process(re_in, im_in, &state);
+
+                max_scores[chip] = state.max_score;
+                memcpy(score_full[chip].data(), state.scores, cst_p_omega * sizeof(float));
+            }
+
+            const auto iter_max_score = std::max_element(max_scores.begin() + 2 * frame_size, max_scores.end() - 2 * frame_size);
+
+            const unsigned current_counter             = inner_counters[thread_id]++;
+            inner_memories[thread_id][current_counter] = *iter_max_score;
+
+            if (full_score) {
+                omp_set_lock(&lock_file);
+                write_full_score(score_full, score_mat);
+                omp_unset_lock(&lock_file);
+            }
+
+            if (current_counter >= inner_memories[thread_id].size() - 1) {
+                inner_counters[thread_id] = 0U;
+
+                omp_set_lock(&lock_file);
+                write_score_md(inner_memories[thread_id], score_mat);
+                omp_unset_lock(&lock_file);
+            }
+
+            const uint64_t done = runs_done++;
+
+            if (done % std::max(runs / 100, 1) == 0) {
+                omp_set_lock(&lock_out);
+                progressBar(done, runs);
+                omp_unset_lock(&lock_out);
+            }
+        }
+
+#pragma omp single
+        {
+            runs_done = 0ULL;
+            omp_set_lock(&lock_out);
+            progressBar(runs, runs);
+            printf("\n\n");
+            omp_unset_lock(&lock_out);
+
+            omp_set_lock(&lock_file);
+            for (int thread_id = 0; thread_id < threads; thread_id++) {
+                debug_print("There is remains in thread " << thread_id);
+                const unsigned counter = inner_counters[thread_id];
+                if (counter != 0U) {
+                    const auto iter = inner_memories[thread_id].cbegin();
+
+                    const vector<float> remains(iter, iter + counter);
+                    write_score_md(remains, score_mat);
+                }
+                inner_counters[thread_id] = 0U;
+            }
+            omp_unset_lock(&lock_file);
+        }
+
+#pragma omp single
+        {
+            info_stream << "Launching `False Alarm` scenario." << endl;
+        }
+
+#pragma omp for
+        for (int i = 0; i < runs; i++) {
+            const int thread_id = omp_get_thread_num();
+
+            vector<complexf> noisy_sequence;
+            vector<float>    max_scores(run_length);
+
+            vector<vector<float>> score_full(run_length, vector<float>(cst_p_omega));
+
+            state_t state {};
+            state.frame_detected      = false;
+            state.max_found           = false;
+            state.max_score           = 0.f;
+            state.frequency_offset    = 0.f;
+            state.frequency_index     = 0;
+            state.chip_from_max       = 0;
+            state.chip_since_last_det = 0;
+            std::memset(state.scores, 0, cst_p_omega * sizeof(float));
+
+            generators[thread_id].generate<FA>(noisy_sequence);
+
+            for (int chip = 0; chip < run_length; chip++) {
+                const float re_in = noisy_sequence[chip].real();
+                const float im_in = noisy_sequence[chip].imag();
+
+                detectors[thread_id].process(re_in, im_in, &state);
+
+                max_scores[chip] = state.max_score;
+                memcpy(score_full[chip].data(), state.scores, cst_p_omega * sizeof(float));
+            }
+
+            const auto iter_max_score = std::max_element(max_scores.begin() + 2 * frame_size, max_scores.end() - 2 * frame_size);
+
+            const unsigned current_counter             = inner_counters[thread_id]++;
+            inner_memories[thread_id][current_counter] = *iter_max_score;
+
+            if (full_score) {
+                omp_set_lock(&lock_file);
+                write_full_score(score_full, score_mat);
+                omp_unset_lock(&lock_file);
+            }
+
+            if (current_counter >= unsigned(batch_size - 1)) {
+                inner_counters[thread_id] = 0U;
+
+                omp_set_lock(&lock_file);
+                write_score_fa(inner_memories[thread_id], score_mat);
+                omp_unset_lock(&lock_file);
+            }
+
+            const uint64_t done = runs_done++;
+            if (done % std::max(runs / 100, 1) == 0) {
+                omp_set_lock(&lock_out);
+                progressBar(done, runs);
+                omp_unset_lock(&lock_out);
+            }
+        }
+
+#pragma omp single nowait
+        {
+            runs_done = 0ULL;
+            omp_set_lock(&lock_out);
+            progressBar(runs, runs);
+            printf("\n\n");
+            omp_unset_lock(&lock_out);
+
+            omp_set_lock(&lock_file);
+            for (int thread_id = 0; thread_id < threads; thread_id++) {
+                const unsigned counter = inner_counters[thread_id];
+                if (counter != 0U) {
+                    const auto iter = inner_memories[thread_id].cbegin();
+
+                    const vector<float> remains(iter, iter + counter);
+                    write_score_fa(remains, score_mat);
+                }
+                inner_counters[thread_id] = 0U;
+            }
+            omp_unset_lock(&lock_file);
+        }
+    }
+
+    omp_destroy_lock(&lock_file);
+    omp_destroy_lock(&lock_out);
+
+    Mat_Close(score_mat);
+
+    return EXIT_SUCCESS;
+}

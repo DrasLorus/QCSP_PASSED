@@ -1,4 +1,3 @@
-
 add_subdirectory (CGenerator/nbldpc_functions)
 
 add_library (generator STATIC CGenerator/CGenerator.cpp)

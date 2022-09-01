@@ -49,6 +49,7 @@ int main(int argc, char * argv[]) {
         "delta,d", po::value<int>()->default_value(1), "value of p_delta to use (ignored for time sliding)")(
         "omega,w", po::value<int>()->required(), "value of p_omega to use")(
         "raw", "disable normalization")(
+        "mult", "use mult-based detector")(
         "full-score", "log the full score instead of only the maximum one (WARNING: LARGE FILES AND HEAVY PERFORMANCE IMPACT)")(
         "output-file,o", po::value<string>()->default_value(DEFAULT_SCORE_FILE), "score file to write");
 
@@ -98,11 +99,14 @@ int main(int argc, char * argv[]) {
     }
     fclose(alist);
 
+    const bool use_mult = vm.count("mult");
+
     std::ostringstream os;
     os << "fa_md_simulation_N" << N
        << "_q" << q
        << "_w" << p_omega
-       << "_" << int(normed);
+       << "_" << int(normed)
+       << (use_mult ? "_mult" : "");
 
     const string program_name = os.str();
 

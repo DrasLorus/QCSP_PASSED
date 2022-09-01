@@ -1,0 +1,337 @@
+#include "CDetector/CDetector.hpp"
+
+#include <algorithm>
+#include <catch2/catch.hpp>
+#include <matio.h>
+#include <vector>
+
+using namespace QCSP::StandaloneDetector;
+using std::vector;
+
+TEMPLATE_TEST_CASE("CDetectorSerialMult (Raw) works for high snr inputs (q: @TARGET_Q@, N: 60, w: 1)", "[detector][high][raw][q@TARGET_Q@][mult]", float, double) {
+
+    constexpr unsigned q       = @TARGET_Q@;
+    constexpr unsigned N       = 60;
+    constexpr unsigned p_omega = 1;
+
+    mat_t * parm_file = Mat_Open("../data/pn_sequences.mat", MAT_ACC_RDONLY);
+    if (not bool(parm_file)) {
+        throw "../data/pn_sequences.mat can't be opened.";
+    }
+
+    matvar_t * tmp_pn = Mat_VarRead(parm_file, "PN@TARGET_Q@");
+    if (not bool(tmp_pn)) {
+        throw "PN@TARGET_Q@ can't be loaded.";
+    }
+
+    const vector<float> pn((float *) tmp_pn->data, (float *) tmp_pn->data + tmp_pn->dims[1]);
+    if (pn.size() != q) {
+        throw "PN@TARGET_Q@ and q don't match.";
+    }
+
+    Mat_VarFree(tmp_pn);
+    Mat_Close(parm_file);
+
+    mat_t * data_file = Mat_Open("../data/test_data_q@TARGET_Q@_N60_w1_step0_span0.0.mat", MAT_ACC_RDONLY);
+    if (not bool(data_file)) {
+        throw "../data/test_data_q@TARGET_Q@_N60_w1_step0_span0.0.mat can't be opened.";
+    }
+
+    matvar_t * tmp_mat = Mat_VarRead(data_file, "data_input_infdB_w1_q@TARGET_Q@_N60_0pi_1_n10");
+    if (not bool(tmp_mat)) {
+        throw "data_input_infdB_w1_q@TARGET_Q@_N60_0pi_1_n10 can't be loaded.";
+    }
+
+    const vector<TestType> re_in((float *) tmp_mat->data, ((float *) tmp_mat->data) + tmp_mat->dims[0]);
+    const vector<TestType> im_in(tmp_mat->dims[0], 0);
+
+    Mat_VarFree(tmp_mat);
+
+    tmp_mat = Mat_VarRead(data_file, "deltas_infdB_w1_q@TARGET_Q@_N60_0pi_1_n10");
+    if (not bool(tmp_mat)) {
+        throw "deltas_infdB_w1_q@TARGET_Q@_N60_0pi_1_n10 can't be loaded.";
+    }
+
+    const vector<int64_t> deltas((float *) tmp_mat->data, ((float *) tmp_mat->data) + tmp_mat->dims[0]);
+
+    Mat_VarFree(tmp_mat);
+
+    Mat_Close(data_file);
+    constexpr TestType threshold        = .5f;
+    constexpr uint32_t step_denominator = 0U;
+
+    using detector_t = CDetectorSerialMult<N, q, p_omega, TestType, false>;
+
+    constexpr unsigned window_size = detector_t::window_size;
+
+    detector_t * proc = new detector_t(
+        pn.data(),
+        threshold,
+        step_denominator);
+
+    REQUIRE(proc->threshold() == threshold);
+
+    vector<std::pair<DetectionState<TestType, TestType, p_omega>, int64_t>> results;
+
+    DetectionState<TestType, TestType, p_omega> running_state {false, false, {0.f}, 0.f, 0LU, 0LU, 0.f, 0U};
+
+    SECTION("Standard Score") {
+        for (int64_t i = 0; i < int64_t(re_in.size()); i++) {
+            proc->process(re_in[i], im_in[i], &running_state);
+            if (running_state.frame_detected and (running_state.chip_since_last_det == 0)) {
+                results.push_back({running_state, i});
+            }
+            if (running_state.max_found and (running_state.chip_since_last_det == window_size)) {
+                results.push_back({running_state, i});
+            }
+
+            REQUIRE(running_state.max_found xor (running_state.chip_since_last_det < window_size));
+            REQUIRE(running_state.chip_since_last_det < (window_size * 2));
+            REQUIRE((running_state.chip_from_max < window_size));
+            REQUIRE(running_state.max_score > 0.f - @TARGET_Q@e-3);
+            REQUIRE((running_state.max_score == running_state.scores[0] or (running_state.frame_detected)));
+        }
+
+        REQUIRE(results.size() == 20LU);
+
+        constexpr TestType low_score  = TestType(1.);
+        constexpr TestType high_score = TestType(q * N);
+        constexpr TestType cfos       = TestType(0.);
+        constexpr TestType tolerance  = TestType(1e-5);
+
+        for (int64_t i = 0; i < int64_t(results.size()); i += 2) {
+            const auto & result_i   = results[i];
+            const auto & result_ip1 = results[i + 1];
+
+            const int64_t chip_no = result_ip1.second - window_size + result_ip1.first.chip_from_max;
+
+            // * If you want to explore the results, uncomment the 6 following lines
+            // printf("-- Detection no %ld score exceeded the threshold of %5.1f at chip no %ld,\n"
+            //        "-- for a score of %16.8f and a frequency offset of %16.8e Hz.\n",
+            //        i >> 1, proc->threshold(), result_i.second, result_i.first.max_score, result_i.first.frequency_offset);
+            // printf("-- Detection no %ld max has been found at chip no %ld,\n"
+            //        "-- for a score of %16.8f and a frequency offset of %16.8e Hz.\n",
+            //        i >> 1, result_ip1.second - result_ip1.first.chip_from_max, result_ip1.first.max_score, result_ip1.first.frequency_offset);
+
+            REQUIRE(result_i.second == (i >> 1) * window_size * 5 + 2 * window_size + deltas[i >> 1]);
+            REQUIRE_THAT(result_i.first.max_score, Catch::Matchers::WithinRel(low_score, tolerance));
+            REQUIRE_THAT(result_i.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
+            REQUIRE(chip_no == ((i >> 1) * window_size * 5 + 3 * window_size - 1 + deltas[i >> 1]));
+            REQUIRE_THAT(result_ip1.first.max_score, Catch::Matchers::WithinRel(high_score, tolerance));
+            REQUIRE_THAT(result_ip1.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
+        }
+    }
+
+    SECTION("Square Score") {
+        for (int64_t i = 0; i < int64_t(re_in.size()); i++) {
+
+            proc->process_sqr(re_in[i], im_in[i], &running_state);
+            if (running_state.frame_detected and (running_state.chip_since_last_det == 0)) {
+                results.push_back({running_state, i});
+            }
+            if (running_state.max_found and (running_state.chip_since_last_det == window_size)) {
+                results.push_back({running_state, i});
+            }
+
+            REQUIRE(running_state.max_found xor (running_state.chip_since_last_det < window_size));
+            REQUIRE(running_state.chip_since_last_det < (window_size * 2));
+            REQUIRE((running_state.chip_from_max < window_size));
+            REQUIRE(running_state.max_score > 0.f - @TARGET_Q@e-3);
+            REQUIRE((running_state.max_score == running_state.scores[0] or (running_state.frame_detected)));
+        }
+
+        REQUIRE(results.size() == 20LU);
+
+        constexpr TestType low_score  = TestType(1.);
+        constexpr TestType high_score = TestType(q * q * N);
+        constexpr TestType cfos       = TestType(0.);
+        constexpr TestType tolerance  = TestType(1e-5);
+
+        for (int64_t i = 0; i < int64_t(results.size()); i += 2) {
+            const auto & result_i   = results[i];
+            const auto & result_ip1 = results[i + 1];
+
+            const int64_t chip_no = result_ip1.second - window_size + result_ip1.first.chip_from_max;
+
+            // * If you want to explore the results, uncomment the 6 following lines
+            // printf("-- Detection no %ld score exceeded the threshold of %5.1f at chip no %ld,\n"
+            //        "-- for a score of %16.8f and a frequency offset of %16.8e Hz.\n",
+            //        i >> 1, proc->threshold(), result_i.second, result_i.first.max_score, result_i.first.frequency_offset);
+            // printf("-- Detection no %ld max has been found at chip no %ld,\n"
+            //        "-- for a score of %16.8f and a frequency offset of %16.8e Hz.\n",
+            //        i >> 1, result_ip1.second - result_ip1.first.chip_from_max, result_ip1.first.max_score, result_ip1.first.frequency_offset);
+
+            REQUIRE(result_i.second == (i >> 1) * window_size * 5 + window_size * 2 + deltas[i >> 1]);
+            REQUIRE_THAT(result_i.first.max_score, Catch::Matchers::WithinRel(low_score, tolerance));
+            REQUIRE_THAT(result_i.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
+            REQUIRE(chip_no == ((i >> 1) * window_size * 5 + window_size * 3 - 1 + deltas[i >> 1]));
+            REQUIRE_THAT(result_ip1.first.max_score, Catch::Matchers::WithinRel(high_score, tolerance));
+            REQUIRE_THAT(result_ip1.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
+        }
+    }
+    delete proc;
+}
+
+TEMPLATE_TEST_CASE("CDetectorSerialMult (L2) works for high snr inputs (q: @TARGET_Q@, N: 60, w: 1)", "[detector][high][l2][q@TARGET_Q@][mult]", float, double) {
+
+    constexpr unsigned q       = @TARGET_Q@;
+    constexpr unsigned N       = 60;
+    constexpr unsigned p_omega = 1;
+
+    mat_t * parm_file = Mat_Open("../data/pn_sequences.mat", MAT_ACC_RDONLY);
+    if (not bool(parm_file)) {
+        throw "../data/pn_sequences.mat can't be opened.";
+    }
+
+    matvar_t * tmp_pn = Mat_VarRead(parm_file, "PN@TARGET_Q@");
+    if (not bool(tmp_pn)) {
+        throw "PN@TARGET_Q@ can't be loaded.";
+    }
+
+    const vector<float> pn((float *) tmp_pn->data, (float *) tmp_pn->data + tmp_pn->dims[1]);
+    if (pn.size() != q) {
+        throw "PN@TARGET_Q@ and q don't match.";
+    }
+
+    Mat_VarFree(tmp_pn);
+    Mat_Close(parm_file);
+
+    mat_t * data_file = Mat_Open("../data/test_data_q@TARGET_Q@_N60_w1_step0_span0.0.mat", MAT_ACC_RDONLY);
+    if (not bool(data_file)) {
+        throw "../data/test_data_q@TARGET_Q@_N60_w1_step0_span0.0.mat can't be opened.";
+    }
+
+    matvar_t * tmp_mat = Mat_VarRead(data_file, "data_input_infdB_w1_q@TARGET_Q@_N60_0pi_1_n10");
+    if (not bool(tmp_mat)) {
+        throw "data_input_infdB_w1_q@TARGET_Q@_N60_0pi_1_n10 can't be loaded.";
+    }
+
+    const vector<TestType> re_in((float *) tmp_mat->data, ((float *) tmp_mat->data) + tmp_mat->dims[0]);
+    const vector<TestType> im_in(tmp_mat->dims[0], 0);
+
+    Mat_VarFree(tmp_mat);
+
+    tmp_mat = Mat_VarRead(data_file, "deltas_infdB_w1_q@TARGET_Q@_N60_0pi_1_n10");
+    if (not bool(tmp_mat)) {
+        throw "deltas_infdB_w1_q@TARGET_Q@_N60_0pi_1_n10 can't be loaded.";
+    }
+
+    const vector<int64_t> deltas((float *) tmp_mat->data, ((float *) tmp_mat->data) + tmp_mat->dims[0]);
+
+    Mat_VarFree(tmp_mat);
+
+    Mat_Close(data_file);
+    constexpr TestType threshold        = .5f;
+    constexpr uint32_t step_denominator = 0U;
+
+    using detector_t = CDetectorSerialMult<N, q, p_omega, TestType, true>;
+
+    constexpr unsigned window_size = detector_t::window_size;
+
+    detector_t * proc = new detector_t(
+        pn.data(),
+        threshold,
+        step_denominator);
+
+    REQUIRE(proc->threshold() == threshold);
+
+    vector<std::pair<DetectionState<TestType, TestType, p_omega>, int64_t>> results;
+
+    DetectionState<TestType, TestType, p_omega> running_state {false, false, {0.f}, 0.f, 0LU, 0LU, 0.f, 0U};
+
+    SECTION("Standard Score") {
+        for (int64_t i = 0; i < int64_t(re_in.size()); i++) {
+            proc->process(re_in[i], im_in[i], &running_state);
+            if (running_state.frame_detected and (running_state.chip_since_last_det == 0)) {
+                results.push_back({running_state, i});
+            }
+            if (running_state.max_found and (running_state.chip_since_last_det == window_size)) {
+                results.push_back({running_state, i});
+            }
+
+            REQUIRE(running_state.max_found xor (running_state.chip_since_last_det < window_size));
+            REQUIRE(running_state.chip_since_last_det < (window_size * 2));
+            REQUIRE((running_state.chip_from_max < window_size));
+            REQUIRE(running_state.max_score > 0.f - @TARGET_Q@e-3);
+            REQUIRE((running_state.max_score == running_state.scores[0] or (running_state.frame_detected)));
+        }
+
+        REQUIRE(results.size() == 20LU);
+
+        constexpr TestType low_score  = TestType(1.);
+        constexpr TestType high_score = TestType(double(q * N) / @TARGET_SQRT_Q@);
+        constexpr TestType cfos       = TestType(0.);
+        constexpr TestType tolerance  = TestType(1e-5);
+
+        for (int64_t i = 0; i < int64_t(results.size()); i += 2) {
+            const auto & result_i   = results[i];
+            const auto & result_ip1 = results[i + 1];
+
+            const int64_t chip_no = result_ip1.second - window_size + result_ip1.first.chip_from_max;
+
+            // * If you want to explore the results, uncomment the 6 following lines
+            // printf("-- Detection no %ld score exceeded the threshold of %5.1f at chip no %ld,\n"
+            //        "-- for a score of %16.8f and a frequency offset of %16.8e Hz.\n",
+            //        i >> 1, proc->threshold(), result_i.second, result_i.first.max_score, result_i.first.frequency_offset);
+            // printf("-- Detection no %ld max has been found at chip no %ld,\n"
+            //        "-- for a score of %16.8f and a frequency offset of %16.8e Hz.\n",
+            //        i >> 1, result_ip1.second - result_ip1.first.chip_from_max, result_ip1.first.max_score, result_ip1.first.frequency_offset);
+
+            REQUIRE(result_i.second == (i >> 1) * window_size * 5 + 2 * window_size + deltas[i >> 1]);
+            REQUIRE_THAT(result_i.first.max_score, Catch::Matchers::WithinAbs(low_score, TestType(high_score * 1e-6)));
+            REQUIRE_THAT(result_i.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
+            REQUIRE(chip_no == ((i >> 1) * window_size * 5 + 3 * window_size - 1 + deltas[i >> 1]));
+            REQUIRE_THAT(result_ip1.first.max_score, Catch::Matchers::WithinRel(high_score, tolerance));
+            REQUIRE_THAT(result_ip1.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
+        }
+    }
+
+    SECTION("Square Score") {
+        for (int64_t i = 0; i < int64_t(re_in.size()); i++) {
+
+            proc->process_sqr(re_in[i], im_in[i], &running_state);
+            if (running_state.frame_detected and (running_state.chip_since_last_det == 0)) {
+                results.push_back({running_state, i});
+            }
+            if (running_state.max_found and (running_state.chip_since_last_det == window_size)) {
+                results.push_back({running_state, i});
+            }
+
+            REQUIRE(running_state.max_found xor (running_state.chip_since_last_det < window_size));
+            REQUIRE(running_state.chip_since_last_det < (window_size * 2));
+            REQUIRE((running_state.chip_from_max < window_size));
+            REQUIRE(running_state.max_score > 0.f - @TARGET_Q@e-3);
+            REQUIRE((running_state.max_score == running_state.scores[0] or (running_state.frame_detected)));
+        }
+
+        REQUIRE(results.size() == 20LU);
+
+        constexpr TestType low_score  = TestType(1.);
+        constexpr TestType high_score = TestType(q * N);
+        constexpr TestType cfos       = TestType(0.);
+        constexpr TestType tolerance  = TestType(1e-5);
+
+        for (int64_t i = 0; i < int64_t(results.size()); i += 2) {
+            const auto & result_i   = results[i];
+            const auto & result_ip1 = results[i + 1];
+
+            const int64_t chip_no = result_ip1.second - window_size + result_ip1.first.chip_from_max;
+
+            // * If you want to explore the results, uncomment the 6 following lines
+            // printf("-- Detection no %ld score exceeded the threshold of %5.1f at chip no %ld,\n"
+            //        "-- for a score of %16.8f and a frequency offset of %16.8e Hz.\n",
+            //        i >> 1, proc->threshold(), result_i.second, result_i.first.max_score, result_i.first.frequency_offset);
+            // printf("-- Detection no %ld max has been found at chip no %ld,\n"
+            //        "-- for a score of %16.8f and a frequency offset of %16.8e Hz.\n",
+            //        i >> 1, result_ip1.second - result_ip1.first.chip_from_max, result_ip1.first.max_score, result_ip1.first.frequency_offset);
+
+            REQUIRE(result_i.second == (i >> 1) * window_size * 5 + window_size * 2 + deltas[i >> 1]);
+            REQUIRE_THAT(result_i.first.max_score, Catch::Matchers::WithinRel(low_score, tolerance));
+            REQUIRE_THAT(result_i.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
+            REQUIRE(chip_no == ((i >> 1) * window_size * 5 + window_size * 3 - 1 + deltas[i >> 1]));
+            REQUIRE_THAT(result_ip1.first.max_score, Catch::Matchers::WithinRel(high_score, tolerance));
+            REQUIRE_THAT(result_ip1.first.frequency_offset, Catch::Matchers::WithinRel(cfos, tolerance));
+        }
+    }
+    delete proc;
+}

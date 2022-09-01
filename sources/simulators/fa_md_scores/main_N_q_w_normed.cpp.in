@@ -69,7 +69,16 @@ static constexpr int   step_denominator = int(pi_f / float(rotation_span) * floa
 
 static constexpr CorrelationEngineType correngine = TIME_SLIDING;
 
-using detector_t = CDetectorSerial<cst_N, cst_q, cst_p_omega, float, normed, correngine>;
+#cmakedefine USE_MULT
+#ifdef USE_MULT
+#define TDetector CDetectorSerialMult
+#define STR_DETECTOR "tsmult"
+#else
+#define TDetector CDetectorSerial
+#define STR_DETECTOR "ts"
+#endif
+
+using detector_t = TDetector<cst_N, cst_q, cst_p_omega, float, normed, correngine>;
 using state_t    = detector_t::state_t;
 
 /*********************************************/
@@ -344,7 +353,7 @@ int main(int argc, char * argv[]) {
     string output_path = vm["output-file"].as<string>();
     if (output_path == DEFAULT_SCORE_FILE) {
         std::ostringstream os;
-        os << "score_fa_md_ts_" << (normed ? "normed" : "raw")
+        os << "score_fa_md_" << STR_DETECTOR << (normed ? "_normed" : "_raw")
            << "_snr" << std::setprecision(5) << snr
            << "_q" << cst_q
            << "_d" << cst_q

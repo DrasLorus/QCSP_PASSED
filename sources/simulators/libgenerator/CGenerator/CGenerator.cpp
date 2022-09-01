@@ -59,9 +59,9 @@ void CGenerator::add_bpsk_phase_rotation(const vector<bool> & delayed_frame, con
     const int32_t delay    = param.delay;
 
     for (int i = frame_size() * 2 + delay; i < frame_size() * 3 + delay; i++) {
-        const float local_rotation = rotation * float(i) / float(q()) + phase;
+        const double local_rotation = double(rotation) * double(i) / double(q()) + double(phase);
 
-        rotated_frame[i] = std::exp(complexf(0, local_rotation)) * -float(int32_t(delayed_frame[i]) * 2 - 1);
+        rotated_frame[i] = complexf(std::exp(std::complex<double>(0., local_rotation)) * -double(int32_t(delayed_frame[i]) * 2 - 1));
     }
 } // Add BPSK + add phase and rotation if any
 

@@ -7,7 +7,7 @@ check_include_files ("unistd.h" HAVE_UNISTD_H)
 configure_file (config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config.h)
 
 set (FAMD_TARGET_N "60")
-set (FAMD_TARGET_Q "64")
+set (FAMD_TARGET_Q "64;256")
 set (FAMD_TARGET_W "1;2;4;8")
 set (FAMD_TARGET_NORMED "0;1")
 

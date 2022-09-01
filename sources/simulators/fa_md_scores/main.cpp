@@ -46,7 +46,7 @@ int main(int argc, char * argv[]) {
         "ovmod-file", po::value<string>()->required(), "overmodulation sequence file to use")(
         "alist-file", po::value<string>()->required(), "alist file to use")(
         "threads,t", po::value<int>()->default_value(1), "number of threads to use")(
-        "delta,d", po::value<int>()->required(), "value of p_delta to use")(
+        "delta,d", po::value<int>()->default_value(1), "value of p_delta to use (ignored for time sliding)")(
         "omega,w", po::value<int>()->required(), "value of p_omega to use")(
         "raw", "disable normalization")(
         "full-score", "log the full score instead of only the maximum one (WARNING: LARGE FILES AND HEAVY PERFORMANCE IMPACT)")(

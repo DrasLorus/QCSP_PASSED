@@ -6,9 +6,13 @@ check_include_files ("unistd.h" HAVE_UNISTD_H)
 
 configure_file (config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config.h)
 
+add_library (fa_md_utilities OBJECT utility_functions.cpp)
+target_link_libraries (fa_md_utilities PUBLIC ${matio})
+target_link_directories (fa_md_utilities PUBLIC ${matio_INCLUDEDIR})
+
 set (FAMD_TARGET_N "60")
 set (FAMD_TARGET_Q "64;256")
-set (FAMD_TARGET_W "1;2;4;8")
+set (FAMD_TARGET_W "1;2;3;4;5;8")
 set (FAMD_TARGET_NORMED "0;1")
 
 unset (USE_MULT)
@@ -16,22 +20,19 @@ foreach (TARGET_N ${FAMD_TARGET_N})
   foreach (TARGET_Q ${FAMD_TARGET_Q})
     foreach (TARGET_W ${FAMD_TARGET_W})
       foreach (TARGET_NORMED ${FAMD_TARGET_NORMED})
+        set (LOCAL_SUFFIX N${TARGET_N}_q${TARGET_Q}_w${TARGET_W}_${TARGET_NORMED})
 
-        configure_file (main_N_q_w_normed.cpp.in main_N${TARGET_N}_q${TARGET_Q}_w${TARGET_W}_${TARGET_NORMED}.cpp @ONLY)
+        configure_file (main_N_q_w_normed.cpp.in main_${LOCAL_SUFFIX}.cpp @ONLY)
 
-        add_executable (
-          fa_md_simulation_N${TARGET_N}_q${TARGET_Q}_w${TARGET_W}_${TARGET_NORMED}
-          main_N${TARGET_N}_q${TARGET_Q}_w${TARGET_W}_${TARGET_NORMED}.cpp
-        )
+        add_executable (fa_md_simulation_${LOCAL_SUFFIX} main_${LOCAL_SUFFIX}.cpp)
 
-        target_include_directories (
-          fa_md_simulation_N${TARGET_N}_q${TARGET_Q}_w${TARGET_W}_${TARGET_NORMED} BEFORE PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
-        )
-        target_link_directories (fa_md_simulation_N${TARGET_N}_q${TARGET_Q}_w${TARGET_W}_${TARGET_NORMED} PRIVATE ${matio_INCLUDEDIR})
+        target_include_directories (fa_md_simulation_${LOCAL_SUFFIX} BEFORE PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+        target_link_directories (fa_md_simulation_${LOCAL_SUFFIX} PRIVATE ${matio_INCLUDEDIR})
         target_link_libraries (
-          fa_md_simulation_N${TARGET_N}_q${TARGET_Q}_w${TARGET_W}_${TARGET_NORMED}
+          fa_md_simulation_${LOCAL_SUFFIX}
           PRIVATE generator
                   detectors
+                  fa_md_utilities
                   Boost::program_options
                   OpenMP::OpenMP_CXX
                   ${matio}
@@ -39,8 +40,7 @@ foreach (TARGET_N ${FAMD_TARGET_N})
         )
 
         set_target_properties (
-          fa_md_simulation_N${TARGET_N}_q${TARGET_Q}_w${TARGET_W}_${TARGET_NORMED}
-          PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/fa_md_simulation
+          fa_md_simulation_${LOCAL_SUFFIX} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/fa_md_simulation
         )
       endforeach ()
     endforeach ()
@@ -56,19 +56,15 @@ foreach (TARGET_N ${FAMD_TARGET_N})
 
         configure_file (main_N_q_w_normed.cpp.in main_${LOCAL_SUFFIX}.cpp @ONLY)
 
-        add_executable (
-          fa_md_simulation_${LOCAL_SUFFIX}
-          main_${LOCAL_SUFFIX}.cpp
-        )
+        add_executable (fa_md_simulation_${LOCAL_SUFFIX} main_${LOCAL_SUFFIX}.cpp)
 
-        target_include_directories (
-          fa_md_simulation_${LOCAL_SUFFIX} BEFORE PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
-        )
+        target_include_directories (fa_md_simulation_${LOCAL_SUFFIX} BEFORE PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
         target_link_directories (fa_md_simulation_${LOCAL_SUFFIX} PRIVATE ${matio_INCLUDEDIR})
         target_link_libraries (
           fa_md_simulation_${LOCAL_SUFFIX}
           PRIVATE generator
                   detectors
+                  fa_md_utilities
                   Boost::program_options
                   OpenMP::OpenMP_CXX
                   ${matio}
@@ -76,8 +72,7 @@ foreach (TARGET_N ${FAMD_TARGET_N})
         )
 
         set_target_properties (
-          fa_md_simulation_${LOCAL_SUFFIX}
-          PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/fa_md_simulation
+          fa_md_simulation_${LOCAL_SUFFIX} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/fa_md_simulation
         )
       endforeach ()
     endforeach ()

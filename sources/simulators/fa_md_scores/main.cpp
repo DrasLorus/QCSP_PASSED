@@ -48,6 +48,10 @@ int main(int argc, char * argv[]) {
         "threads,t", po::value<int>()->default_value(1), "number of threads to use")(
         "delta,d", po::value<int>()->default_value(1), "value of p_delta to use (ignored for time sliding)")(
         "omega,w", po::value<int>()->required(), "value of p_omega to use")(
+        "threshold,H", po::value<float>(), "threshold to use in detection (no effect if complete is not specified)")(
+        "complete", "simulate a complete detector instead of a partially inhibited one (WARNING: THRESHOLD MATTERS)")(
+        "no-fa", "disable False Alarm scenario")(
+        "no-md", "disable Miss Detection scenario")(
         "raw", "disable normalization")(
         "mult", "use mult-based detector")(
         "full-score", "log the full score instead of only the maximum one (WARNING: LARGE FILES AND HEAVY PERFORMANCE IMPACT)")(
@@ -80,6 +84,11 @@ int main(int argc, char * argv[]) {
     const int    threads    = vm["threads"].as<int>();
     // const int    p_delta     = vm["delta"].as<int>();
     const int    p_omega     = vm["omega"].as<int>();
+    const bool   have_thres  = vm.count("threshold");
+    const float  threshold   = have_thres ? vm["threshold"].as<float>() : 0.f;
+    const bool   complete    = vm.count("complete");
+    const bool   no_fa       = vm.count("no-fa");
+    const bool   no_md       = vm.count("no-md");
     const bool   normed      = !vm.count("raw");
     const bool   full_score  = vm.count("full-score");
     const string output_path = vm["output-file"].as<string>();
@@ -133,7 +142,8 @@ int main(int argc, char * argv[]) {
     const string alist_abs_path(abs_alist);
     free(abs_alist);
 
-    const string threads_str = std::to_string(threads);
+    const string threads_str   = std::to_string(threads);
+    const string threshold_str = std::to_string(threshold);
 
     const pid_t pid = fork();
     if (pid == 0) {
@@ -146,8 +156,12 @@ int main(int argc, char * argv[]) {
             "--ovmod-file", ovmod_abs_path.c_str(),
             "--alist-file", alist_abs_path.c_str(),
             "--threads", threads_str.c_str(),
-            (full_score ? "--full-score" : ""),
             "--output-file", output_path.c_str(),
+            (have_thres ? "--threshold" : ""), (have_thres ? threshold_str.c_str() : ""),
+            (complete ? "--complete" : ""),
+            (no_fa ? "--no-fa" : ""),
+            (no_md ? "--no-md" : ""),
+            (full_score ? "--full-score" : ""),
             (char *) NULL);
 
         if (result != 0) {

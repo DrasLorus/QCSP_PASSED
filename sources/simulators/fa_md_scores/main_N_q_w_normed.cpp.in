@@ -24,6 +24,7 @@
 #include <omp.h>
 
 #include "config.h"
+#include "utility_functions.hpp"
 
 using std::complex;
 using std::string;
@@ -35,23 +36,10 @@ namespace po = boost::program_options;
 
 using namespace QCSP::StandaloneDetector;
 using namespace QCSP::StandaloneDetector::Simulators;
+using namespace QCSP::StandaloneDetector::Utilities;
 
 using std::cerr;
-using std::cout;
 using std::endl;
-
-#define error_stream   cerr << "\033[31;1m[Error]\033[0m "
-#define warning_stream cerr << "\033[33;1m[Warning]\033[0m "
-#define info_stream    cerr << "\033[34;1m[INFO]\033[0m "
-
-#ifndef NDEBUG
-#define debug_print(info) cerr << "\033[35;1m[DEBUG]\033[0m " << info << endl
-#else
-#define debug_print(info) assert(true)
-#endif
-
-#define MD false
-#define FA true
 
 /*********************************************/
 /* Constants Definitions *********************/
@@ -62,124 +50,24 @@ static constexpr int  cst_p_omega = @TARGET_W@;
 static constexpr bool normed      = @TARGET_NORMED@;
 
 /*********************************************/
-/* Constants Deductions *********************/
+/* Constants Deductions **********************/
 /*********************************************/
-static constexpr float rotation_span    = two_pi_f;
-static constexpr int   step_denominator = int(pi_f / float(rotation_span) * float(cst_p_omega));
+static constexpr float rotation_span    = two_pi_f * float(cst_p_omega) / std::max(float((cst_p_omega >> 1) << 1), 1.f) * float(cst_p_omega > 1);
+static constexpr int   step_denominator = cst_p_omega >> 1;
 
 static constexpr CorrelationEngineType correngine = TIME_SLIDING;
 
 #cmakedefine USE_MULT
 #ifdef USE_MULT
-#define TDetector CDetectorSerialMult
+#define TDetector    CDetectorSerialMult
 #define STR_DETECTOR "tsmult"
 #else
-#define TDetector CDetectorSerial
+#define TDetector    CDetectorSerial
 #define STR_DETECTOR "ts"
 #endif
 
 using detector_t = TDetector<cst_N, cst_q, cst_p_omega, float, normed, correngine>;
 using state_t    = detector_t::state_t;
-
-/*********************************************/
-/* Function Definitions *********************/
-/*********************************************/
-
-template <typename T1, typename T2>
-static void progressBar(T1 i, T2 max) {
-    const double progress = double(i) / double(max);
-    const size_t barWidth = 60;
-    const size_t pos      = barWidth * progress;
-
-    cout << "[";
-    for (size_t i = 0; i < barWidth; ++i) {
-        if (i < pos)
-            cout << "=";
-        else if (i == pos)
-            cout << ">";
-        else
-            cout << " ";
-    }
-    cout << "] " << size_t(progress * 100.0) << " % \r";
-    cout.flush();
-}
-
-static void write_score_fa(const vector<float> & score, mat_t * score_mat) {
-    size_t dims[2] = {1U, score.size()};
-
-    matvar_t * score_fa_var = Mat_VarCreate(
-        "score_fa",
-        MAT_C_SINGLE, MAT_T_SINGLE,
-        2, dims,
-        (void *) score.data(),
-        0);
-    if (!bool(score_fa_var)) {
-        throw std::runtime_error("Failed to create a new variable score_fa");
-    }
-
-    const int result = Mat_VarWriteAppend(score_mat, score_fa_var, MAT_COMPRESSION_ZLIB, 2);
-    Mat_VarFree(score_fa_var);
-
-    if (result != 0) {
-        throw std::runtime_error("Failed to append score_fa variable to the matfile.\nFailed with code " + std::to_string(result) + ".");
-    }
-}
-
-static void write_score_md(const vector<float> & score, mat_t * score_mat) {
-    size_t dims[2] = {1U, score.size()};
-
-    matvar_t * score_md_var = Mat_VarCreate(
-        "score_md",
-        MAT_C_SINGLE, MAT_T_SINGLE,
-        2, dims,
-        (void *) score.data(),
-        0);
-    if (!bool(score_md_var)) {
-        throw std::runtime_error("Failed to create a new variable score_md");
-    }
-
-    const int result = Mat_VarWriteAppend(score_mat, score_md_var, MAT_COMPRESSION_ZLIB, 2);
-    Mat_VarFree(score_md_var);
-
-    if (result != 0) {
-        throw std::runtime_error("Failed to append score_md variable to the matfile.\nFailed with code " + std::to_string(result) + ".");
-    }
-}
-
-static void write_full_score(const vector<vector<float>> & scores, mat_t * score_mat) {
-    size_t dims[2] = {scores[0].size(), scores.size()};
-
-    float * lin_scores = new float[dims[0] * dims[1]];
-    for (int i = 0; i < int(scores.size()); i++) {
-        memcpy(lin_scores + i * scores[0].size(), scores[i].data(), scores[0].size() * sizeof(float));
-    }
-
-    matvar_t * score_var = Mat_VarCreate(
-        "score_full",
-        MAT_C_SINGLE, MAT_T_SINGLE,
-        2, dims,
-        (void *) lin_scores,
-        0);
-    if (!bool(score_var)) {
-        throw std::runtime_error("Failed to create a new variable score_full");
-    }
-
-    const int result = Mat_VarWriteAppend(score_mat, score_var, MAT_COMPRESSION_ZLIB, 2);
-    Mat_VarFree(score_var);
-    delete[] lin_scores;
-    if (result != 0) {
-        throw std::runtime_error("Failed to append score_full variable to the matfile.\nFailed with code " + std::to_string(result) + ".");
-    }
-}
-
-// static void write_full_score(const vector<vector<float>> & scores, FILE * score_file) {
-//     for (const auto & score : scores) {
-//         for (const auto & value : score) {
-//             fprintf(score_file, "%-16f", value);
-//         }
-//         fprintf(score_file, "\n");
-//     }
-// }
 
 int main(int argc, char * argv[]) {
     static_assert(cst_p_omega > 0, "p_omega cannot be null.");
@@ -195,6 +83,10 @@ int main(int argc, char * argv[]) {
         "ovmod-file", po::value<string>()->required(), "overmodulation sequence file to use")(
         "alist-file", po::value<string>()->required(), "alist file to use")(
         "threads,t", po::value<int>()->default_value(1), "number of threads to use")(
+        "threshold,H", po::value<float>()->default_value((cst_N * pow2_log2<cst_q>()) / 2.f), "threshold to use in detection (no effect if complete is not specified)")(
+        "complete", "simulate a complete detector instead of a partially inhibited one (WARNING: THRESHOLD MATTERS)")(
+        "no-fa", "disable False Alarm scenario")(
+        "no-md", "disable Miss Detection scenario")(
         "full-score", "log the full score instead of only the maximum one (WARNING: LARGE FILES AND HEAVY PERFORMANCE IMPACT)")(
         "output-file,o", po::value<string>()->default_value(DEFAULT_SCORE_FILE), "score file to write");
 
@@ -324,16 +216,18 @@ int main(int argc, char * argv[]) {
         generators.emplace_back(alist_path, pn, ovmod, snr, rotation_span);
     }
 
+    const float threshold = vm["threshold"].as<float>();
+
     vector<detector_t> detectors;
     for (int t = 0; t < threads; t++) {
-        detectors.emplace_back(pn.data(), 450, step_denominator);
+        detectors.emplace_back(pn.data(), threshold, step_denominator);
     }
 
     const int runs           = vm["runs"].as<int>() * int(vm["runs"].as<int>() > 0);
     const int run_per_thread = int(ceilf(float(runs) / float(threads)));
 
-    constexpr int frame_size = cst_N * cst_q;
-    constexpr int run_length = cst_N * cst_q * 5;
+    constexpr int frame_size = detector_t::window_size;
+    constexpr int run_length = frame_size * 5;
 
     constexpr int64_t max_batch_size = (1 << (10 * 3)) / sizeof(float);
 
@@ -348,13 +242,29 @@ int main(int argc, char * argv[]) {
             batch_size,
             0.f));
 
+    const bool do_fa = !vm.count("no-fa");
+    const bool do_md = !vm.count("no-md");
+
+    const int runs_md = runs * int(do_md);
+    const int runs_fa = runs * int(do_fa);
+
+    const bool complete = vm.count("complete");
+
     const bool full_score = vm.count("full-score");
 
     string output_path = vm["output-file"].as<string>();
     if (output_path == DEFAULT_SCORE_FILE) {
         std::ostringstream os;
-        os << "score_fa_md_" << STR_DETECTOR << (normed ? "_normed" : "_raw")
-           << "_snr" << std::setprecision(5) << snr
+        os << "score_fa_md_" << STR_DETECTOR
+           << (normed ? "_normed" : "_raw");
+
+        if (complete) {
+            os << "_H" << std::setprecision(2) << threshold;
+        } else {
+            os << "_classic";
+        }
+
+        os << "_snr" << std::setprecision(5) << snr
            << "_q" << cst_q
            << "_d" << cst_q
            << "_w" << cst_p_omega
@@ -389,11 +299,15 @@ int main(int argc, char * argv[]) {
 
 #pragma omp single
         {
-            info_stream << "Launching `Miss Detection` scenario." << endl;
+            if (do_md) {
+                info_stream << "Launching `Miss Detection` scenario." << endl;
+            } else {
+                info_stream << "`Miss Detection` scenario ignored." << endl;
+            }
         }
 
 #pragma omp for
-        for (int i = 0; i < runs; i++) {
+        for (int i = 0; i < runs_md; i++) {
             const int thread_id = omp_get_thread_num();
 
             vector<complexf> noisy_sequence;
@@ -416,6 +330,8 @@ int main(int argc, char * argv[]) {
             for (int chip = 0; chip < run_length; chip++) {
                 const float re_in = noisy_sequence[chip].real();
                 const float im_in = noisy_sequence[chip].imag();
+
+                state.frame_detected &= complete;
 
                 detectors[thread_id].process(re_in, im_in, &state);
 
@@ -444,9 +360,9 @@ int main(int argc, char * argv[]) {
 
             const uint64_t done = runs_done++;
 
-            if (done % std::max(runs / 100, 1) == 0) {
+            if (done % std::max(runs_md / 100, 1) == 0) {
                 omp_set_lock(&lock_out);
-                progressBar(done, runs);
+                progressBar(done, runs_md);
                 omp_unset_lock(&lock_out);
             }
         }
@@ -455,7 +371,7 @@ int main(int argc, char * argv[]) {
         {
             runs_done = 0ULL;
             omp_set_lock(&lock_out);
-            progressBar(runs, runs);
+            progressBar(1U, 1U);
             printf("\n\n");
             omp_unset_lock(&lock_out);
 
@@ -476,11 +392,15 @@ int main(int argc, char * argv[]) {
 
 #pragma omp single
         {
-            info_stream << "Launching `False Alarm` scenario." << endl;
+            if (do_fa) {
+                info_stream << "Launching `False Alarm` scenario." << endl;
+            } else {
+                info_stream << "`False Alarm` scenario ignored." << endl;
+            }
         }
 
 #pragma omp for
-        for (int i = 0; i < runs; i++) {
+        for (int i = 0; i < runs_fa; i++) {
             const int thread_id = omp_get_thread_num();
 
             vector<complexf> noisy_sequence;
@@ -503,6 +423,8 @@ int main(int argc, char * argv[]) {
             for (int chip = 0; chip < run_length; chip++) {
                 const float re_in = noisy_sequence[chip].real();
                 const float im_in = noisy_sequence[chip].imag();
+
+                state.frame_detected &= complete;
 
                 detectors[thread_id].process(re_in, im_in, &state);
 
@@ -530,9 +452,9 @@ int main(int argc, char * argv[]) {
             }
 
             const uint64_t done = runs_done++;
-            if (done % std::max(runs / 100, 1) == 0) {
+            if (done % std::max(runs_fa / 100, 1) == 0) {
                 omp_set_lock(&lock_out);
-                progressBar(done, runs);
+                progressBar(done, runs_fa);
                 omp_unset_lock(&lock_out);
             }
         }
@@ -541,7 +463,7 @@ int main(int argc, char * argv[]) {
         {
             runs_done = 0ULL;
             omp_set_lock(&lock_out);
-            progressBar(runs, runs);
+            progressBar(1U, 1U);
             printf("\n\n");
             omp_unset_lock(&lock_out);
 

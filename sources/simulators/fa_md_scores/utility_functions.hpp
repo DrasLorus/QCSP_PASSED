@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <string>
 
 #include <matio.h>
 
@@ -15,10 +16,10 @@ namespace Utilities {
 /*********************************************/
 
 template <typename T1, typename T2>
-static void progressBar(T1 i, T2 max) {
-    const double progress = double(i) / double(max);
+static void progressBar(T1 v, T2 max) {
+    const double progress = double(v) / double(max);
     const size_t barWidth = 60;
-    const size_t pos      = barWidth * progress;
+    const size_t pos      = size_t(barWidth * progress);
 
     std::cout << "[";
     for (size_t i = 0; i < barWidth; ++i) {

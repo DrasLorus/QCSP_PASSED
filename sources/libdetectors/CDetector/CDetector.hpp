@@ -81,7 +81,7 @@ private:
         const bool max_found      = current_count >= window_size;
         const bool relaxed        = current_count >= (window_size * 2) or current_count == 0;
 
-        const uint32_t local_cfid = size_t(max_score - scores);
+        const uint32_t local_cfid = uint32_t(max_score - scores);
         const TIn_Type local_cfos = frequency_errors[local_cfid];
 
         const bool fetch_new_values = not(frame_already_detected and not(relaxed)) or (higher_score and not(max_found) and not(relaxed));
@@ -94,7 +94,7 @@ private:
         memcpy(state->scores, scores, sizeof(TIn_Type) * p_omega);
         state->max_score           = new_max_score;
         state->frequency_offset    = new_cfos;
-        state->frequency_index     = new_cfid;
+        state->frequency_index     = uint32_t(new_cfid);
         state->frame_detected      = (frame_already_detected and not(relaxed)) or over_threshold;
         state->max_found           = max_found and not(relaxed) and frame_already_detected;
         state->chip_since_last_det = uint64_t(frame_already_detected) * new_count;
@@ -256,7 +256,7 @@ private:
         const bool max_found      = current_count >= window_size;
         const bool relaxed        = current_count >= (window_size * 2) or current_count == 0;
 
-        const uint32_t local_cfid = size_t(max_score - scores);
+        const uint32_t local_cfid = uint32_t(max_score - scores);
         const TIn_Type local_cfos = frequency_errors[local_cfid];
 
         const bool fetch_new_values = not(frame_already_detected and not(relaxed)) or (higher_score and not(max_found) and not(relaxed));
@@ -269,7 +269,7 @@ private:
         memcpy(state->scores, scores, sizeof(TIn_Type) * p_omega);
         state->max_score           = new_max_score;
         state->frequency_offset    = new_cfos;
-        state->frequency_index     = new_cfid;
+        state->frequency_index     = uint32_t(new_cfid);
         state->frame_detected      = (frame_already_detected and not(relaxed)) or over_threshold;
         state->max_found           = max_found and not(relaxed) and frame_already_detected;
         state->chip_since_last_det = uint64_t(frame_already_detected) * new_count;
@@ -280,7 +280,7 @@ public:
     const TIn_Type * pn() const { return score_processors[0].get_pn(); }
 
     TIn_Type threshold() const noexcept { return _threshold; }
-    TIn_Type symbol_rotation() const noexcept { return std::min(TIn_Type(pi) / TIn_Type(den_step), TIn_Type(4. * double(den_step))); }
+    TIn_Type symbol_rotation() const noexcept { return std::min(TIn_Type(pi) / TIn_Type(std::max(den_step, 1U)), TIn_Type(4. * double(den_step))); }
     TIn_Type rotation_step() const noexcept { return symbol_rotation() / TIn_Type(q); }
 
     const std::vector<TIn_Type> & root_rotations() const noexcept { return _root_rotations; }

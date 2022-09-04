@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -5,9 +6,10 @@
 #include <iostream>
 
 #include <boost/program_options.hpp>
-#include <libgen.h>
+#include <sstream>
+#include <stdlib.h>
+#include <string.h>
 #include <string>
-#include <unistd.h>
 
 #include "./config.h"
 
@@ -15,6 +17,11 @@
 #include <libgen.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#elif defined(_MSC_VER)
+#include <windows.h>
+
+#include <pathcch.h>
+#include <processthreadsapi.h>
 #endif
 
 using std::string;
@@ -184,6 +191,91 @@ int main(int argc, char * argv[]) {
         perror("Failed to fork the process.");
         exit(EXIT_FAILURE);
     }
+#elif defined(_MSC_VER)
+
+    char *    abs_path    = _fullpath(nullptr, argv[0], 256);
+    wchar_t * program_dir = new wchar_t[strlen(abs_path)];
+    std::copy(abs_path, abs_path + strlen(abs_path), program_dir);
+
+    const long int r = PathCchRemoveFileSpec(program_dir, wcslen(program_dir));
+    if ((r != 0) && (r != 1)) {
+        error_stream << "Path is ill-formed at line " << __LINE__ << " (code " << r << ")." << endl;
+    }
+
+    const string program_path = string(program_dir, program_dir + wcslen(program_dir)) + "\\fa_md_simulation\\" + program_name;
+
+    free(abs_path);
+    delete[] program_dir;
+
+    const string snr_str  = std::to_string(snr);
+    const string runs_str = std::to_string(runs);
+
+    char *       abs_pn = _fullpath(nullptr, pn_path.c_str(), pn_path.size());
+    const string pn_abs_path((bool(abs_pn) ? abs_pn : "pn-file-NOT-FOUND"));
+    free(abs_pn);
+
+    char *       abs_ovmod = _fullpath(nullptr, ovmod_path.c_str(), ovmod_path.size());
+    const string ovmod_abs_path((bool(abs_ovmod) ? abs_ovmod : "ovmod-file-NOT-FOUND"));
+    free(abs_ovmod);
+
+    char *       abs_alist = _fullpath(nullptr, alist_path.c_str(), alist_path.size());
+    const string alist_abs_path(abs_alist);
+    free(abs_alist);
+
+    const string threads_str   = std::to_string(threads);
+    const string threshold_str = std::to_string(threshold);
+
+    std::ostringstream os_cmd;
+    os_cmd << program_name.c_str()
+           << "--snr" << snr_str.c_str()
+           << "--runs" << runs_str.c_str()
+           << "--pn-file" << pn_abs_path.c_str()
+           << "--ovmod-file" << ovmod_abs_path.c_str()
+           << "--alist-file" << alist_abs_path.c_str()
+           << "--threads" << threads_str.c_str()
+           << "--output-file" << output_path.c_str()
+           << (have_thres ? "--threshold" : "") << (have_thres ? threshold_str.c_str() : "")
+           << (complete ? "--complete" : "")
+           << (no_fa ? "--no-fa" : "")
+           << (no_md ? "--no-md" : "")
+           << (full_score ? "--full-score" : "") << (char *) NULL;
+
+    char * cmdline = new char[os.str().size() + 1];
+    copy(os.str().begin(), os.str().end(), cmdline);
+
+    STARTUPINFOA        si;
+    PROCESS_INFORMATION pi;
+
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    ZeroMemory(&pi, sizeof(pi));
+
+    const int have_failed = CreateProcessA(
+        program_path.c_str(),
+        cmdline,
+        nullptr,
+        nullptr,
+        FALSE,
+        0,
+        nullptr,
+        nullptr,
+        &si,
+        &pi);
+
+    if (have_failed) {
+        error_stream << "CreateProcess failed for " << program_path << " (code " << GetLastError() << ")." << endl;
+        delete[] cmdline;
+        exit(EXIT_FAILURE);
+    }
+
+    // Wait until child process exits.
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    // Close process and thread handles.
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+
+    delete[] cmdline;
 #endif
     return EXIT_SUCCESS;
 }

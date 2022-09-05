@@ -53,7 +53,7 @@ static constexpr bool normed      = @TARGET_NORMED@;
 /* Constants Deductions **********************/
 /*********************************************/
 static constexpr float rotation_span    = two_pi_f * float(cst_p_omega) / std::max(float((cst_p_omega >> 1) << 1), 1.f) * float(cst_p_omega > 1);
-static constexpr int   step_denominator = cst_p_omega >> 1;
+static constexpr int   step_denominator = (cst_p_omega >> 1) << 1;
 
 static constexpr CorrelationEngineType correngine = TIME_SLIDING;
 
@@ -211,6 +211,8 @@ int main(int argc, char * argv[]) {
     Mat_VarFree(ovmod_var);
     Mat_Close(ovmod_file);
 
+    using frame_param_t = CGenerator::frame_param_t;
+
     vector<CGenerator> generators;
     for (int t = 0; t < threads; t++) {
         generators.emplace_back(alist_path, pn, ovmod, snr, rotation_span);
@@ -224,7 +226,12 @@ int main(int argc, char * argv[]) {
     }
 
     const int runs           = vm["runs"].as<int>() * int(vm["runs"].as<int>() > 0);
-    const int run_per_thread = int(ceilf(float(runs) / float(threads)));
+    const int run_per_thread = int(float(runs) / float(threads));
+
+    if (run_per_thread * threads != runs) {
+        error_stream << "A total number of run (" << runs << ") not divisible by the number of threads(" << threads << ") is not supported." << endl;
+        exit(EXIT_FAILURE);
+    }
 
     constexpr int frame_size = detector_t::window_size;
     constexpr int run_length = frame_size * 5;
@@ -294,10 +301,13 @@ int main(int argc, char * argv[]) {
     omp_init_lock(&lock_out);
     std::atomic_ullong runs_done(0);
 
+    const int run_md_per_thread = std::min(run_per_thread, runs_md);
+    const int run_fa_per_thread = std::min(run_per_thread, runs_fa);
+
 #pragma omp parallel num_threads(threads) if ((threads > 1) && !full_score) shared(score_mat)
     {
 
-#pragma omp single
+#pragma omp single nowait
         {
             if (do_md) {
                 info_stream << "Launching `Miss Detection` scenario." << endl;
@@ -306,7 +316,7 @@ int main(int argc, char * argv[]) {
             }
         }
 
-#pragma omp for
+#pragma omp for schedule(static, run_md_per_thread)
         for (int i = 0; i < runs_md; i++) {
             const int thread_id = omp_get_thread_num();
 
@@ -325,7 +335,7 @@ int main(int argc, char * argv[]) {
             state.chip_since_last_det = 0;
             std::memset(state.scores, 0, cst_p_omega * sizeof(float));
 
-            generators[thread_id].generate<MD>(noisy_sequence);
+            const frame_param_t params = generators[thread_id].generate<MD>(noisy_sequence);
 
             for (int chip = 0; chip < run_length; chip++) {
                 const float re_in = noisy_sequence[chip].real();
@@ -339,7 +349,7 @@ int main(int argc, char * argv[]) {
                 memcpy(score_full[chip].data(), state.scores, cst_p_omega * sizeof(float));
             }
 
-            const auto iter_max_score = std::max_element(max_scores.begin() + 2 * frame_size, max_scores.end() - 2 * frame_size);
+            const auto iter_max_score = std::max_element(max_scores.begin() + 2 * frame_size + params.delay, max_scores.begin() + 4 * frame_size + params.delay);
 
             const unsigned current_counter             = inner_counters[thread_id]++;
             inner_memories[thread_id][current_counter] = *iter_max_score;
@@ -390,7 +400,7 @@ int main(int argc, char * argv[]) {
             omp_unset_lock(&lock_file);
         }
 
-#pragma omp single
+#pragma omp single nowait
         {
             if (do_fa) {
                 info_stream << "Launching `False Alarm` scenario." << endl;
@@ -399,7 +409,7 @@ int main(int argc, char * argv[]) {
             }
         }
 
-#pragma omp for
+#pragma omp for schedule(static, run_fa_per_thread)
         for (int i = 0; i < runs_fa; i++) {
             const int thread_id = omp_get_thread_num();
 
@@ -418,7 +428,7 @@ int main(int argc, char * argv[]) {
             state.chip_since_last_det = 0;
             std::memset(state.scores, 0, cst_p_omega * sizeof(float));
 
-            generators[thread_id].generate<FA>(noisy_sequence);
+            const frame_param_t params = generators[thread_id].generate<FA>(noisy_sequence);
 
             for (int chip = 0; chip < run_length; chip++) {
                 const float re_in = noisy_sequence[chip].real();
@@ -432,7 +442,7 @@ int main(int argc, char * argv[]) {
                 memcpy(score_full[chip].data(), state.scores, cst_p_omega * sizeof(float));
             }
 
-            const auto iter_max_score = std::max_element(max_scores.begin() + 2 * frame_size, max_scores.end() - 2 * frame_size);
+            const auto iter_max_score = std::max_element(max_scores.begin() + 2 * frame_size + params.delay, max_scores.begin() + 2 * frame_size + params.delay);
 
             const unsigned current_counter             = inner_counters[thread_id]++;
             inner_memories[thread_id][current_counter] = *iter_max_score;

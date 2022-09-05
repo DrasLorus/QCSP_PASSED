@@ -2,6 +2,16 @@
 #include <algorithm>
 
 #include <fstream>
+using std::endl;
+
+#if defined(DEBUG) && (DEBUG > 0)
+#ifndef DEBUG_GENERATOR_MD
+#define DEBUG_GENERATOR_MD DEBUG
+#endif
+#ifndef DEBUG_GENERATOR_FA
+#define DEBUG_GENERATOR_FA DEBUG
+#endif
+#endif
 
 using namespace QCSP::StandaloneDetector::Simulators;
 
@@ -61,7 +71,7 @@ void CGenerator::add_bpsk_phase_rotation(const vector<bool> & delayed_frame, con
     for (int i = frame_size() * 2 + delay; i < frame_size() * 3 + delay; i++) {
         const double local_rotation = double(rotation) * double(i) / double(q()) + double(phase);
 
-        rotated_frame[i] = complexf(std::exp(std::complex<double>(0., local_rotation)) * -double(int32_t(delayed_frame[i]) * 2 - 1));
+        rotated_frame[i] = complexf(std::exp(std::complex<double>(0., local_rotation)) * double(int32_t(delayed_frame[i]) * 2 - 1));
     }
 } // Add BPSK + add phase and rotation if any
 
@@ -81,10 +91,17 @@ CGenerator::frame_param_t CGenerator::generate<false>(vector<complexf> & noisy_s
     vector<complexf> rotated_frame(run_length());
 
     noisy_sequence.resize(run_length());
+#ifdef DEBUG_GENERATOR_MD
+    std::ofstream seq_log_file("frame_parameters.txt", std::ios::app);
+    seq_log_file << run_parameters.delay << " "
+                 << run_parameters.phase << " "
+                 << run_parameters.rotation << endl;
+    seq_log_file.close();
+#endif
 
     message_generation(message);
 #ifdef DEBUG_GENERATOR_MD
-    std::ofstream seq_log_file("message.txt", std::ios::app);
+    seq_log_file.open("message.txt", std::ios::app);
     for (const auto & val : message) {
         seq_log_file << val << "\n";
     }

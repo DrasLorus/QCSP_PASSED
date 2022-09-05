@@ -111,7 +111,7 @@ public:
           gen_noise(std::random_device()()),
           distr_message(),
           distr_delay(),
-          distr_phase(0, two_pi_f),
+          distr_phase(-pi_f, pi_f),
           distr_rotation(-rotation_span / 2.f, rotation_span / 2.f),
           distr_noise(0, _sigma) {
 

@@ -32,16 +32,6 @@ using std::cerr;
 // using std::cout;
 using std::endl;
 
-#define error_stream   cerr << "\033[31;1m[Error]\033[0m "
-#define warning_stream cerr << "\033[33;1m[Warning]\033[0m "
-#define info_stream    cerr << "\033[34;1m[INFO]\033[0m "
-
-#ifndef NDEBUG
-#define debug_print(info) cerr << "\033[35;1m[DEBUG]\033[0m " << info
-#else
-#define debug_print(info) assert(true)
-#endif
-
 int main(int argc, char * argv[]) {
 
     po::options_description desc("Options");

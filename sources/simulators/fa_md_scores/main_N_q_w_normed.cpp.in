@@ -52,8 +52,9 @@ static constexpr bool normed      = @TARGET_NORMED@;
 /*********************************************/
 /* Constants Deductions **********************/
 /*********************************************/
-static constexpr float rotation_span    = two_pi_f * float(cst_p_omega) / std::max(float((cst_p_omega >> 1) << 1), 1.f) * float(cst_p_omega > 1);
-static constexpr int   step_denominator = (cst_p_omega >> 1) << 1;
+static constexpr int   actual_p_omega   = cst_p_omega + int(cst_p_omega == 0);
+static constexpr float rotation_span    = two_pi_f * float(cst_p_omega) / std::max(float((cst_p_omega >> 1) << 1), 1.f) * float(cst_p_omega > 0);
+static constexpr int   step_denominator = cst_p_omega >> int(is_odd<int, cst_p_omega>());
 
 static constexpr CorrelationEngineType correngine = TIME_SLIDING;
 
@@ -66,11 +67,11 @@ static constexpr CorrelationEngineType correngine = TIME_SLIDING;
 #define STR_DETECTOR "ts"
 #endif
 
-using detector_t = TDetector<cst_N, cst_q, cst_p_omega, float, normed, correngine>;
+using detector_t = TDetector<cst_N, cst_q, actual_p_omega, float, normed, correngine>;
 using state_t    = detector_t::state_t;
 
 int main(int argc, char * argv[]) {
-    static_assert(cst_p_omega > 0, "p_omega cannot be null.");
+    static_assert(cst_p_omega >= 0, "p_omega cannot be negative.");
     static_assert(is_pow2(cst_q), "q must be a power of 2.");
     static_assert(cst_N == 60, "cst_N must be 60.");
 
@@ -109,7 +110,6 @@ int main(int argc, char * argv[]) {
         return 1;
     }
     const float snr = vm["snr"].as<float>();
-    // const int   runs = vm["runs"].as<int>();
 
     const int threads = std::max(vm["threads"].as<int>(), 1);
 
@@ -274,7 +274,7 @@ int main(int argc, char * argv[]) {
         os << "_snr" << std::setprecision(5) << snr
            << "_q" << cst_q
            << "_d" << cst_q
-           << "_w" << cst_p_omega
+           << "_w" << actual_p_omega
            << "_step1_" << step_denominator
            << "_span" << std::setprecision(5) << rotation_span / pi_f
            << ".mat";
@@ -297,9 +297,10 @@ int main(int argc, char * argv[]) {
     omp_lock_t lock_file;
     omp_init_lock(&lock_file);
 
-    omp_lock_t lock_out;
-    omp_init_lock(&lock_out);
-    std::atomic_ullong runs_done(0);
+    size_t         runs_done = 0LU;
+
+    const size_t cond_update_md = size_t(runs_md / 100);
+    const size_t cond_update_fa = size_t(runs_fa / 100);
 
     const int run_md_per_thread = std::min(run_per_thread, runs_md);
     const int run_fa_per_thread = std::min(run_per_thread, runs_fa);
@@ -323,7 +324,7 @@ int main(int argc, char * argv[]) {
             vector<complexf> noisy_sequence;
             vector<float>    max_scores(run_length);
 
-            vector<vector<float>> score_full(run_length, vector<float>(cst_p_omega));
+            vector<vector<float>> score_full(run_length, vector<float>(actual_p_omega));
 
             state_t state {};
             state.frame_detected      = false;
@@ -333,7 +334,7 @@ int main(int argc, char * argv[]) {
             state.frequency_index     = 0;
             state.chip_from_max       = 0;
             state.chip_since_last_det = 0;
-            std::memset(state.scores, 0, cst_p_omega * sizeof(float));
+            std::memset(state.scores, 0, actual_p_omega * sizeof(float));
 
             const frame_param_t params = generators[thread_id].generate<MD>(noisy_sequence);
 
@@ -341,12 +342,12 @@ int main(int argc, char * argv[]) {
                 const float re_in = noisy_sequence[chip].real();
                 const float im_in = noisy_sequence[chip].imag();
 
-                state.frame_detected &= complete;
+                state.frame_detected = state.frame_detected && complete;
 
                 detectors[thread_id].process(re_in, im_in, &state);
 
                 max_scores[chip] = state.max_score;
-                memcpy(score_full[chip].data(), state.scores, cst_p_omega * sizeof(float));
+                memcpy(score_full[chip].data(), state.scores, actual_p_omega * sizeof(float));
             }
 
             const auto iter_max_score = std::max_element(max_scores.begin() + 2 * frame_size + params.delay, max_scores.begin() + 4 * frame_size + params.delay);
@@ -368,23 +369,17 @@ int main(int argc, char * argv[]) {
                 omp_unset_lock(&lock_file);
             }
 
-            const uint64_t done = runs_done++;
-
-            if (done % std::max(runs_md / 100, 1) == 0) {
-                omp_set_lock(&lock_out);
-                progressBar(done, runs_md);
-                omp_unset_lock(&lock_out);
+            if (thread_id == 0) {
+                const size_t done = runs_done + threads;
+                if (done > cond_update_md) {
+                    progressBar(done, runs_md);
+                }
+                runs_done = done;
             }
         }
 
 #pragma omp single
         {
-            runs_done = 0ULL;
-            omp_set_lock(&lock_out);
-            progressBar(1U, 1U);
-            printf("\n\n");
-            omp_unset_lock(&lock_out);
-
             omp_set_lock(&lock_file);
             for (int thread_id = 0; thread_id < threads; thread_id++) {
                 debug_print("There is remains in thread " << thread_id);
@@ -395,9 +390,13 @@ int main(int argc, char * argv[]) {
                     const vector<float> remains(iter, iter + counter);
                     write_score_md(remains, score_mat);
                 }
-                inner_counters[thread_id] = 0U;
+                inner_counters[thread_id]  = 0U;
             }
             omp_unset_lock(&lock_file);
+
+            runs_done = 0ULL;
+            progressBar(1U, 1U);
+            printf("\n\n");
         }
 
 #pragma omp single nowait
@@ -416,7 +415,7 @@ int main(int argc, char * argv[]) {
             vector<complexf> noisy_sequence;
             vector<float>    max_scores(run_length);
 
-            vector<vector<float>> score_full(run_length, vector<float>(cst_p_omega));
+            vector<vector<float>> score_full(run_length, vector<float>(actual_p_omega));
 
             state_t state {};
             state.frame_detected      = false;
@@ -426,7 +425,7 @@ int main(int argc, char * argv[]) {
             state.frequency_index     = 0;
             state.chip_from_max       = 0;
             state.chip_since_last_det = 0;
-            std::memset(state.scores, 0, cst_p_omega * sizeof(float));
+            std::memset(state.scores, 0, actual_p_omega * sizeof(float));
 
             const frame_param_t params = generators[thread_id].generate<FA>(noisy_sequence);
 
@@ -434,12 +433,12 @@ int main(int argc, char * argv[]) {
                 const float re_in = noisy_sequence[chip].real();
                 const float im_in = noisy_sequence[chip].imag();
 
-                state.frame_detected &= complete;
+                state.frame_detected = state.frame_detected && complete;
 
                 detectors[thread_id].process(re_in, im_in, &state);
 
                 max_scores[chip] = state.max_score;
-                memcpy(score_full[chip].data(), state.scores, cst_p_omega * sizeof(float));
+                memcpy(score_full[chip].data(), state.scores, actual_p_omega * sizeof(float));
             }
 
             const auto iter_max_score = std::max_element(max_scores.begin() + 2 * frame_size + params.delay, max_scores.begin() + 2 * frame_size + params.delay);
@@ -461,22 +460,17 @@ int main(int argc, char * argv[]) {
                 omp_unset_lock(&lock_file);
             }
 
-            const uint64_t done = runs_done++;
-            if (done % std::max(runs_fa / 100, 1) == 0) {
-                omp_set_lock(&lock_out);
-                progressBar(done, runs_fa);
-                omp_unset_lock(&lock_out);
+            if (thread_id == 0) {
+                const size_t done = runs_done + threads;
+                if (done > cond_update_fa) {
+                    progressBar(done, runs_fa);
+                }
+                runs_done = done;
             }
         }
 
 #pragma omp single nowait
         {
-            runs_done = 0ULL;
-            omp_set_lock(&lock_out);
-            progressBar(1U, 1U);
-            printf("\n\n");
-            omp_unset_lock(&lock_out);
-
             omp_set_lock(&lock_file);
             for (int thread_id = 0; thread_id < threads; thread_id++) {
                 const unsigned counter = inner_counters[thread_id];
@@ -489,11 +483,14 @@ int main(int argc, char * argv[]) {
                 inner_counters[thread_id] = 0U;
             }
             omp_unset_lock(&lock_file);
+
+            runs_done = 0ULL;
+            progressBar(1U, 1U);
+            printf("\n\n");
         }
     }
 
     omp_destroy_lock(&lock_file);
-    omp_destroy_lock(&lock_out);
 
     Mat_Close(score_mat);
 

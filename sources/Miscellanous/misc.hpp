@@ -90,15 +90,17 @@ struct max_pow2 {
     }
 };
 
-template <unsigned value>
+template <typename T, T value>
 constexpr bool is_even() {
     return value / 2U * 2U == value;
 }
 
-template <unsigned value>
+template <typename T, T value>
 constexpr bool is_odd() {
-    return not is_even<value>();
+    return not is_even<T, value>();
 }
+
+
 
 } // namespace StandaloneDetector
 } // namespace QCSP

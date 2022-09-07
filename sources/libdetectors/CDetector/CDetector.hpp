@@ -171,15 +171,15 @@ public:
 
         memset(rotation_counters, 0, p_omega * sizeof(size_t));
 
-        for (unsigned u = 0; u < p_omega; u++) {
-            frequency_errors[u] = TIn_Type((double(u) - double(p_omega - 1) / 2.) / double(den_step * q * 2 + unsigned(p_omega <= 1))) * TIn_Type(p_omega > 1);
-        }
-
         std::vector<int> spanf(p_omega);
         // spanf = @(p_omega) -(p_omega - 1) : 2 : (p_omega - 1)
         const int span_root = -int(p_omega - 1);
         for (unsigned u = 0; u < p_omega; u++) {
             spanf[u] = span_root + int(u << 1);
+        }
+
+        for (unsigned u = 0; u < p_omega; u++) {
+            frequency_errors[u] = rotation_step() / two_pi_f * TIn_Type(spanf[u]);
         }
 
         // rotation_vector = @(p_omega, den_step, q) exp(1i * pi / (q * den_step) .* (0 : (rotations_size - 1)))

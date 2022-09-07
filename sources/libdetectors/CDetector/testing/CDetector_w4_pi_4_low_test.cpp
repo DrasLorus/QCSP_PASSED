@@ -47,7 +47,7 @@ vector<vector<T>> load_data_matrix(mat_t * matfile, const string & varname) {
 }
 } // namespace
 
-TEST_CASE("CDetectorSerial (L2, float) works for low snr inputs (q: 64, N: 60, w: 4, d: 4)", "[detector][low][l2][w4]") {
+TEST_CASE("CDetectorSerial (L2, float) works for low snr inputs (q: 64, N: 60, w: 4, d: 4)", "[detector][low][l2][w4][q64]") {
 
     constexpr unsigned q                = 64;
     constexpr unsigned N                = 60;
@@ -166,7 +166,7 @@ TEST_CASE("CDetectorSerial (L2, float) works for low snr inputs (q: 64, N: 60, w
 
         for (unsigned i = 0; i < p_omega; i++) {
             const float proc_freq = proc->frequency_error(i) * 2 * q;
-            const float ref_freq  = float(i) / step_denominator - float(p_omega - 1) / float(2 * step_denominator);
+            const float ref_freq  = float(2 * int(i) + 1 - int(p_omega)) / float(step_denominator);
             REQUIRE_THAT(proc_freq, Catch::Matchers::WithinRel(ref_freq, 1e-6f));
         }
 
@@ -304,7 +304,7 @@ TEST_CASE("CDetectorSerial (L2, float) works for low snr inputs (q: 64, N: 60, w
 
         for (unsigned i = 0; i < p_omega; i++) {
             const float proc_freq = proc->frequency_error(i) * 2 * q;
-            const float ref_freq  = float(i) / step_denominator - float(p_omega - 1) / float(2 * step_denominator);
+            const float ref_freq  = float(2 * int(i) + 1 - int(p_omega)) / float(step_denominator);
             REQUIRE_THAT(proc_freq, Catch::Matchers::WithinRel(ref_freq, 1e-6f));
         }
 
@@ -380,7 +380,7 @@ TEST_CASE("CDetectorSerial (L2, float) works for low snr inputs (q: 64, N: 60, w
     Mat_Close(data_file);
 }
 
-TEST_CASE("CDetectorSerial (Raw, float) works for low snr inputs (q: 64, N: 60, w: 4, d: 4)", "[detector][low][raw][w4]") {
+TEST_CASE("CDetectorSerial (Raw, float) works for low snr inputs (q: 64, N: 60, w: 4, d: 4)", "[detector][low][raw][w4][q64]") {
 
     constexpr unsigned q                = 64;
     constexpr unsigned N                = 60;
@@ -499,7 +499,7 @@ TEST_CASE("CDetectorSerial (Raw, float) works for low snr inputs (q: 64, N: 60, 
 
         for (unsigned i = 0; i < p_omega; i++) {
             const float proc_freq = proc->frequency_error(i) * 2 * q;
-            const float ref_freq  = float(i) / step_denominator - float(p_omega - 1) / float(2 * step_denominator);
+            const float ref_freq  = float(2 * int(i) + 1 - int(p_omega)) / float(step_denominator);
             REQUIRE_THAT(proc_freq, Catch::Matchers::WithinRel(ref_freq, 1e-6f));
         }
 
@@ -636,7 +636,7 @@ TEST_CASE("CDetectorSerial (Raw, float) works for low snr inputs (q: 64, N: 60, 
 
         for (unsigned i = 0; i < p_omega; i++) {
             const float proc_freq = proc->frequency_error(i) * 2 * q;
-            const float ref_freq  = float(i) / step_denominator - float(p_omega - 1) / float(2 * step_denominator);
+            const float ref_freq  = float(2 * int(i) + 1 - int(p_omega)) / float(step_denominator);
             REQUIRE_THAT(proc_freq, Catch::Matchers::WithinRel(ref_freq, 1e-6f));
         }
 

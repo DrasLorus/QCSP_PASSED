@@ -54,7 +54,7 @@ static constexpr bool normed      = @TARGET_NORMED@;
 /*********************************************/
 static constexpr int   actual_p_omega   = cst_p_omega + int(cst_p_omega == 0);
 static constexpr float rotation_span    = two_pi_f * float(cst_p_omega) / std::max(float((cst_p_omega >> 1) << 1), 1.f) * float(cst_p_omega > 0);
-static constexpr int   step_denominator = cst_p_omega >> int(is_odd<int, cst_p_omega>());
+static constexpr int   step_denominator = (cst_p_omega >> int(is_odd<int, cst_p_omega>())) + int(cst_p_omega == 1);
 
 static constexpr CorrelationEngineType correngine = TIME_SLIDING;
 
@@ -297,7 +297,7 @@ int main(int argc, char * argv[]) {
     omp_lock_t lock_file;
     omp_init_lock(&lock_file);
 
-    size_t         runs_done = 0LU;
+    size_t runs_done = 0LU;
 
     const size_t cond_update_md = size_t(runs_md / 100);
     const size_t cond_update_fa = size_t(runs_fa / 100);
@@ -390,7 +390,7 @@ int main(int argc, char * argv[]) {
                     const vector<float> remains(iter, iter + counter);
                     write_score_md(remains, score_mat);
                 }
-                inner_counters[thread_id]  = 0U;
+                inner_counters[thread_id] = 0U;
             }
             omp_unset_lock(&lock_file);
 

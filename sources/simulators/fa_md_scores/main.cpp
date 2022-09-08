@@ -46,6 +46,9 @@ int main(int argc, char * argv[]) {
         "delta,d", po::value<int>()->default_value(1), "value of p_delta to use (ignored for time sliding)")(
         "omega,w", po::value<int>()->required(), "value of p_omega to use")(
         "threshold,H", po::value<float>(), "threshold to use in detection (no effect if complete is not specified)")(
+        "rotation-span", po::value<float>(), "rotation span to use. For a value X, rotation will be in the interval [-X/2, X/2]")(
+        "step-numerator", po::value<unsigned>(), "step numerator to use")(
+        "step-denominator", po::value<unsigned>(), "step denominator to use")(
         "complete", "simulate a complete detector instead of a partially inhibited one (WARNING: THRESHOLD MATTERS)")(
         "no-fa", "disable False Alarm scenario")(
         "no-md", "disable Miss Detection scenario")(
@@ -73,22 +76,27 @@ int main(int argc, char * argv[]) {
         return 1;
     }
 
-    const float  snr        = vm["snr"].as<float>();
-    const int    runs       = vm["runs"].as<int>();
-    const string pn_path    = vm["pn-file"].as<string>();
-    const string ovmod_path = vm["ovmod-file"].as<string>();
-    const string alist_path = vm["alist-file"].as<string>();
-    const int    threads    = vm["threads"].as<int>();
-    // const int    p_delta     = vm["delta"].as<int>();
-    const int    p_omega     = vm["omega"].as<int>();
-    const bool   have_thres  = vm.count("threshold");
-    const float  threshold   = have_thres ? vm["threshold"].as<float>() : 0.f;
-    const bool   complete    = vm.count("complete");
-    const bool   no_fa       = vm.count("no-fa");
-    const bool   no_md       = vm.count("no-md");
-    const bool   normed      = !vm.count("raw");
-    const bool   full_score  = vm.count("full-score");
-    const string output_path = vm["output-file"].as<string>();
+    const float    snr         = vm["snr"].as<float>();
+    const int      runs        = vm["runs"].as<int>();
+    const string   pn_path     = vm["pn-file"].as<string>();
+    const string   ovmod_path  = vm["ovmod-file"].as<string>();
+    const string   alist_path  = vm["alist-file"].as<string>();
+    const int      threads     = vm["threads"].as<int>();
+    const int      p_omega     = vm["omega"].as<int>();
+    const bool     have_thres  = vm.count("threshold");
+    const float    threshold   = have_thres ? vm["threshold"].as<float>() : 0.f;
+    const bool     have_span   = vm.count("rotation-span");
+    const float    rot_span    = have_span ? vm["rotation-span"].as<float>() : 0.f;
+    const bool     have_num    = vm.count("step-numerator");
+    const unsigned step_num    = have_num ? vm["step-numerator"].as<unsigned>() : 0U;
+    const bool     have_step   = vm.count("step-denominator");
+    const unsigned step_den    = have_step ? vm["step-denominator"].as<unsigned>() : 0U;
+    const bool     complete    = vm.count("complete");
+    const bool     no_fa       = vm.count("no-fa");
+    const bool     no_md       = vm.count("no-md");
+    const bool     normed      = !vm.count("raw");
+    const bool     full_score  = vm.count("full-score");
+    const string   output_path = vm["output-file"].as<string>();
 
     FILE * alist = fopen(alist_path.c_str(), "r");
     if (!bool(alist)) {
@@ -141,6 +149,9 @@ int main(int argc, char * argv[]) {
 
     const string threads_str   = std::to_string(threads);
     const string threshold_str = std::to_string(threshold);
+    const string span_str      = std::to_string(rot_span);
+    const string num_str       = std::to_string(step_num);
+    const string step_str      = std::to_string(step_den);
 
     const pid_t pid = fork();
     if (pid == 0) {
@@ -155,6 +166,9 @@ int main(int argc, char * argv[]) {
             "--threads", threads_str.c_str(),
             "--output-file", output_path.c_str(),
             (have_thres ? "--threshold" : ""), (have_thres ? threshold_str.c_str() : ""),
+            (have_span ? "--rotation-span" : ""), (have_span ? span_str.c_str() : ""),
+            (have_num ? "--step-numerator" : ""), (have_num ? num_str.c_str() : ""),
+            (have_step ? "--step-denominator" : ""), (have_step ? step_str.c_str() : ""),
             (complete ? "--complete" : ""),
             (no_fa ? "--no-fa" : ""),
             (no_md ? "--no-md" : ""),
@@ -174,7 +188,8 @@ int main(int argc, char * argv[]) {
         (void) child_pid; // Currently unused
 
         if (result != EXIT_SUCCESS) {
-            error_stream << "Unknown error occured in " << program_name << " (" << (int) child_pid << ") with code " << result << endl;
+            error_stream << "Unknown error occurred in " << program_name
+                         << " (" << (int) child_pid << ") with code " << result << endl;
             exit(EXIT_FAILURE);
         }
     } else {

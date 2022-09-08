@@ -100,7 +100,28 @@ constexpr bool is_odd() {
     return not is_even<T, value>();
 }
 
+template <typename T, T saturation>
+constexpr T low_sat(T a) {
+    return std::max(a, saturation);
+}
 
+template <typename T>
+constexpr T low_sat_1(T a) {
+    return std::max(a, T(1));
+}
+
+template <typename T, T saturation>
+constexpr T high_sat(T a) {
+    return std::min(a, saturation);
+}
+
+constexpr float if_nan_0(float a) {
+    return (std::isnan(a) ? 0 : a);
+}
+
+constexpr double if_nan_0(double a) {
+    return (std::isnan(a) ? 0 : a);
+}
 
 } // namespace StandaloneDetector
 } // namespace QCSP

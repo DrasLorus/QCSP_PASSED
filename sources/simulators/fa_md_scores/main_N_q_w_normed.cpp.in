@@ -52,14 +52,14 @@ static constexpr bool normed      = @TARGET_NORMED@;
 /*********************************************/
 /* Constants Deductions **********************/
 /*********************************************/
-static constexpr int   actual_p_omega   = cst_p_omega + int(cst_p_omega == 0);
-static constexpr float rotation_span    = two_pi_f * float(cst_p_omega) / std::max(float((cst_p_omega >> 1) << 1), 1.f) * float(cst_p_omega > 0);
-static constexpr int   step_denominator = (cst_p_omega >> int(is_odd<int, cst_p_omega>())) + int(cst_p_omega == 1);
+static constexpr int   actual_p_omega = cst_p_omega + int(cst_p_omega == 0);
+static constexpr float default_span   = two_pi_f * float(cst_p_omega) / std::max(float((cst_p_omega >> 1) << 1), 1.f) * float(cst_p_omega > 0);
+static constexpr int   default_step   = (cst_p_omega >> int(is_odd<int, cst_p_omega>()));
 
 static constexpr CorrelationEngineType correngine = TIME_SLIDING;
 
-#cmakedefine USE_MULT
-#ifdef USE_MULT
+#cmakedefine01 USE_MULT
+#if defined(USE_MULT) && (USE_MULT == 1)
 #define TDetector    CDetectorSerialMult
 #define STR_DETECTOR "tsmult"
 #else
@@ -85,6 +85,9 @@ int main(int argc, char * argv[]) {
         "alist-file", po::value<string>()->required(), "alist file to use")(
         "threads,t", po::value<int>()->default_value(1), "number of threads to use")(
         "threshold,H", po::value<float>()->default_value((cst_N * pow2_log2<cst_q>()) / 2.f), "threshold to use in detection (no effect if complete is not specified)")(
+        "rotation-span", po::value<float>()->default_value(default_span), "rotation span to use. For a value X, rotation will be in the interval [-X/2, X/2]")(
+        "step-numerator", po::value<unsigned>()->default_value(1U), "step numerator to use")(
+        "step-denominator", po::value<unsigned>()->default_value(default_step), "step denominator to use")(
         "complete", "simulate a complete detector instead of a partially inhibited one (WARNING: THRESHOLD MATTERS)")(
         "no-fa", "disable False Alarm scenario")(
         "no-md", "disable Miss Detection scenario")(
@@ -211,6 +214,8 @@ int main(int argc, char * argv[]) {
     Mat_VarFree(ovmod_var);
     Mat_Close(ovmod_file);
 
+    const float rotation_span = vm["rotation-span"].as<float>();
+
     using frame_param_t = CGenerator::frame_param_t;
 
     vector<CGenerator> generators;
@@ -218,11 +223,13 @@ int main(int argc, char * argv[]) {
         generators.emplace_back(alist_path, pn, ovmod, snr, rotation_span);
     }
 
-    const float threshold = vm["threshold"].as<float>();
+    const float threshold        = vm["threshold"].as<float>();
+    const int   step_numerator   = int(vm["step-numerator"].as<unsigned>() & ~(1U << 31));
+    const int   step_denominator = int(vm["step-denominator"].as<unsigned>() & ~(1U << 31));
 
     vector<detector_t> detectors;
     for (int t = 0; t < threads; t++) {
-        detectors.emplace_back(pn.data(), threshold, step_denominator);
+        detectors.emplace_back(pn.data(), threshold, step_denominator, step_numerator);
     }
 
     const int runs           = vm["runs"].as<int>() * int(vm["runs"].as<int>() > 0);
@@ -275,7 +282,8 @@ int main(int argc, char * argv[]) {
            << "_q" << cst_q
            << "_d" << cst_q
            << "_w" << actual_p_omega
-           << "_step1_" << step_denominator
+           << "_step" << step_numerator
+           << "_" << step_denominator
            << "_span" << std::setprecision(5) << rotation_span / pi_f
            << ".mat";
 
@@ -291,7 +299,26 @@ int main(int argc, char * argv[]) {
             exit(EXIT_FAILURE);
         }
 
-        info_stream << "File " << output_path << " created." << endl;
+        constexpr size_t var_size = 9;
+
+        size_t dims[2]             = {1UL, var_size};
+        float  file_info[var_size] = {
+            (float) USE_MULT,
+            (float) normed,
+            (float) (complete ? threshold : -1.f),
+            (float) snr,
+            (float) q,
+            (float) q,
+            (float) actual_p_omega,
+            (float) detectors[0].rotation_step(),
+            (float) rotation_span};
+        matvar_t * mat_file_info = Mat_VarCreate("file_info", MAT_C_SINGLE, MAT_T_SINGLE, 2, dims, file_info, 0);
+
+        Mat_VarWrite(score_mat, mat_file_info, MAT_COMPRESSION_ZLIB);
+
+        Mat_VarFree(mat_file_info);
+
+        info_stream << "File " << output_path << " created and initialized." << endl;
     }
 
     omp_lock_t lock_file;

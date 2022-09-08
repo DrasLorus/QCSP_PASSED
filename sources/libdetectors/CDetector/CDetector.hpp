@@ -57,12 +57,16 @@ private:
 
     TIn_Type frequency_errors[p_omega];
 
+    const unsigned num_step;
+    const unsigned den_step;
+
+    const TIn_Type _symbol_rotation;
+    const TIn_Type _rotation_step;
+
     const size_t          rotation_size;
-    std::vector<TIn_Type> rotation_vector;
+    std::vector<TIn_Type> rotation_vect;
     size_t                rotation_increments[p_omega];
     size_t                rotation_counters[p_omega];
-
-    const unsigned den_step;
 
     TIn_Type _threshold;
 
@@ -105,10 +109,10 @@ public:
     const TIn_Type * pn() const { return score_processors[0].get_pn(); }
 
     TIn_Type threshold() const noexcept { return _threshold; }
-    TIn_Type symbol_rotation() const noexcept { return std::min(TIn_Type(pi) / TIn_Type(den_step), TIn_Type(4. * double(den_step))); }
-    TIn_Type rotation_step() const noexcept { return symbol_rotation() / TIn_Type(q); }
+    TIn_Type symbol_rotation() const noexcept { return _symbol_rotation; }
+    TIn_Type rotation_step() const noexcept { return _rotation_step; }
 
-    const std::vector<TIn_Type> & primary_rotation() const noexcept { return rotation_vector; }
+    const std::vector<TIn_Type> & primary_rotation() const noexcept { return rotation_vect; }
 
     TIn_Type frequency_error(unsigned n) const {
         if (n >= p_omega) {
@@ -124,8 +128,8 @@ public:
             const size_t current_counter = rotation_counters[u];
             const size_t local_counter   = current_counter << 1;
 
-            const TIn_Type re_rotation = rotation_vector[local_counter];
-            const TIn_Type im_rotation = rotation_vector[local_counter + 1];
+            const TIn_Type re_rotation = rotation_vect[local_counter];
+            const TIn_Type im_rotation = rotation_vect[local_counter + 1];
 
             const TIn_Type local_re_in = re_in * re_rotation - im_in * im_rotation;
             const TIn_Type local_im_in = re_in * im_rotation + im_in * re_rotation;
@@ -146,8 +150,8 @@ public:
             const size_t current_counter = rotation_counters[u];
             const size_t local_counter   = current_counter << 1;
 
-            const TIn_Type re_rotation = rotation_vector[local_counter];
-            const TIn_Type im_rotation = rotation_vector[local_counter + 1];
+            const TIn_Type re_rotation = rotation_vect[local_counter];
+            const TIn_Type im_rotation = rotation_vect[local_counter + 1];
 
             const TIn_Type local_re_in = re_in * re_rotation - im_in * im_rotation;
             const TIn_Type local_im_in = re_in * im_rotation + im_in * re_rotation;
@@ -162,11 +166,14 @@ public:
     }
 
     template <typename Tpn>
-    CDetectorSerial(Tpn * _pn, TIn_Type threshold, unsigned step_denominator)
+    CDetectorSerial(Tpn * _pn, TIn_Type threshold, unsigned step_denominator, unsigned step_numerator = 1)
         : score_processors(p_omega, score_proc_t(_pn)),
-          rotation_size(std::max(2 * q * (step_denominator * unsigned(p_omega > 1)), 1U)),
-          rotation_vector(std::max(2 * q * (step_denominator * unsigned(p_omega > 1)), 1U) * 2),
-          den_step((step_denominator * unsigned(p_omega > 1))),
+          num_step(step_numerator * unsigned(p_omega > 1)),
+          den_step(step_denominator * unsigned(p_omega > 1)),
+          _symbol_rotation(TIn_Type(pi_f * if_nan_0(float(num_step) / float(den_step)))),
+          _rotation_step(_symbol_rotation / TIn_Type(q)),
+          rotation_size(low_sat_1(2 * q * (den_step / low_sat_1(num_step)))),
+          rotation_vect(low_sat_1(2 * q * (den_step / low_sat_1(num_step))) * 2),
           _threshold(threshold) {
 
         memset(rotation_counters, 0, p_omega * sizeof(size_t));
@@ -182,12 +189,12 @@ public:
             frequency_errors[u] = rotation_step() / two_pi_f * TIn_Type(spanf[u]);
         }
 
-        // rotation_vector = @(p_omega, den_step, q) exp(1i * pi / (q * den_step) .* (0 : (rotations_size - 1)))
+        // rotation_vect = @(p_omega, den_step, q) exp(1i * pi / (q * den_step) .* (0 : (rotations_size - 1)))
         const double common_value = rotation_step();
         for (int i = 0; i < int(rotation_size); i++) {
-            const int idx            = i << 1;
-            rotation_vector[idx]     = (TIn_Type) cos(double(i) * common_value);
-            rotation_vector[idx + 1] = (TIn_Type) sin(double(i) * common_value);
+            const int idx          = i << 1;
+            rotation_vect[idx]     = (TIn_Type) cos(double(i) * common_value);
+            rotation_vect[idx + 1] = (TIn_Type) sin(double(i) * common_value);
         }
 
         for (int u = 0; u < int(p_omega >> 1); u++) {
@@ -232,12 +239,15 @@ private:
 
     TIn_Type frequency_errors[p_omega];
 
-    const size_t          rotation_size;
-    size_t                rotation_counter;
+    const unsigned num_step;
+    const unsigned den_step;
+
+    TIn_Type              _symbol_rotation;
+    TIn_Type              _rotation_step;
     std::vector<TIn_Type> _root_rotations;
     std::vector<TIn_Type> _symbol_root_rotations;
-
-    const unsigned den_step;
+    const size_t          rotation_size;
+    size_t                rotation_counter;
 
     TIn_Type _threshold;
 
@@ -280,8 +290,8 @@ public:
     const TIn_Type * pn() const { return score_processors[0].get_pn(); }
 
     TIn_Type threshold() const noexcept { return _threshold; }
-    TIn_Type symbol_rotation() const noexcept { return std::min(TIn_Type(pi) / TIn_Type(std::max(den_step, 1U)), TIn_Type(4. * double(den_step))); }
-    TIn_Type rotation_step() const noexcept { return symbol_rotation() / TIn_Type(q); }
+    TIn_Type symbol_rotation() const noexcept { return _symbol_rotation; }
+    TIn_Type rotation_step() const noexcept { return _rotation_step; }
 
     const std::vector<TIn_Type> & root_rotations() const noexcept { return _root_rotations; }
     const std::vector<TIn_Type> & symbol_root_rotations() const noexcept { return _symbol_root_rotations; }
@@ -337,18 +347,17 @@ public:
     }
 
     template <typename Tpn>
-    CDetectorSerialMult(Tpn * _pn, TIn_Type threshold, unsigned step_denominator)
+    CDetectorSerialMult(Tpn * _pn, TIn_Type threshold, unsigned step_denominator, unsigned step_numerator = 1)
         : score_processors(p_omega, score_proc_t(_pn)),
-          rotation_size(std::max(2 * q * (step_denominator * unsigned(p_omega > 1)), 1U)),
-          rotation_counter(0),
+          num_step(step_numerator * unsigned(p_omega > 1)),
+          den_step(step_denominator * unsigned(p_omega > 1)),
+          _symbol_rotation(TIn_Type(pi_f * if_nan_0(float(num_step) / float(den_step)))),
+          _rotation_step(_symbol_rotation / TIn_Type(q)),
           _root_rotations(p_omega, TIn_Type(0)),
           _symbol_root_rotations(p_omega, TIn_Type(0)),
-          den_step((step_denominator * unsigned(p_omega > 1))),
+          rotation_size(low_sat_1(2 * q * (den_step / low_sat_1(num_step)))),
+          rotation_counter(0),
           _threshold(threshold) {
-
-        for (unsigned u = 0; u < p_omega; u++) {
-            frequency_errors[u] = TIn_Type((double(u) - double(p_omega - 1) / 2.) / double(den_step * q * 2 + unsigned(p_omega <= 1))) * TIn_Type(p_omega > 1);
-        }
 
         const TIn_Type   common_value = rotation_step();
         std::vector<int> spanf(p_omega);
@@ -358,6 +367,10 @@ public:
             spanf[u]                  = span_root + int(u << 1);
             _root_rotations[u]        = TIn_Type(spanf[u]) * common_value;
             _symbol_root_rotations[u] = _root_rotations[u] * TIn_Type(q);
+        }
+
+        for (unsigned u = 0; u < p_omega; u++) {
+            frequency_errors[u] = rotation_step() / two_pi_f * TIn_Type(spanf[u]);
         }
 
         // * NOTE: Uncomment following lines to monitor spanf and rotation_increments

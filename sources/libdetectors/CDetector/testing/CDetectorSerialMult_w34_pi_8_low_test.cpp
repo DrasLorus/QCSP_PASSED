@@ -166,7 +166,7 @@ TEST_CASE("CDetectorSerialMult (L2, float) works for low snr inputs (q: 64, N: 6
 
         for (unsigned i = 0; i < p_omega; i++) {
             const float proc_freq = proc->frequency_error(i) * 2 * q;
-            const float ref_freq  = float(i) / step_denominator - float(p_omega - 1) / float(2 * step_denominator);
+            const float ref_freq  = float(2 * int(i) + 1 - int(p_omega)) / float(step_denominator);
             REQUIRE_THAT(proc_freq, Catch::Matchers::WithinRel(ref_freq, 1e-6f));
         }
 
@@ -304,7 +304,7 @@ TEST_CASE("CDetectorSerialMult (L2, float) works for low snr inputs (q: 64, N: 6
 
         for (unsigned i = 0; i < p_omega; i++) {
             const float proc_freq = proc->frequency_error(i) * 2 * q;
-            const float ref_freq  = float(i) / step_denominator - float(p_omega - 1) / float(2 * step_denominator);
+            const float ref_freq  = float(2 * int(i) + 1 - int(p_omega)) / float(step_denominator);
             REQUIRE_THAT(proc_freq, Catch::Matchers::WithinRel(ref_freq, 1e-6f));
         }
 
@@ -499,7 +499,7 @@ TEST_CASE("CDetectorSerialMult (Raw, float) works for low snr inputs (q: 64, N: 
 
         for (unsigned i = 0; i < p_omega; i++) {
             const float proc_freq = proc->frequency_error(i) * 2 * q;
-            const float ref_freq  = float(i) / step_denominator - float(p_omega - 1) / float(2 * step_denominator);
+            const float ref_freq  = float(2 * int(i) + 1 - int(p_omega)) / float(step_denominator);
             REQUIRE_THAT(proc_freq, Catch::Matchers::WithinRel(ref_freq, 1e-6f));
         }
 
@@ -636,7 +636,7 @@ TEST_CASE("CDetectorSerialMult (Raw, float) works for low snr inputs (q: 64, N: 
 
         for (unsigned i = 0; i < p_omega; i++) {
             const float proc_freq = proc->frequency_error(i) * 2 * q;
-            const float ref_freq  = float(i) / step_denominator - float(p_omega - 1) / float(2 * step_denominator);
+            const float ref_freq  = float(2 * int(i) + 1 - int(p_omega)) / float(step_denominator);
             REQUIRE_THAT(proc_freq, Catch::Matchers::WithinRel(ref_freq, 1e-6f));
         }
 

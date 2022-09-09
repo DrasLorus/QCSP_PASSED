@@ -172,8 +172,8 @@ public:
           den_step(step_denominator * unsigned(p_omega > 1)),
           _symbol_rotation(TIn_Type(pi_f * if_nan_0(float(num_step) / float(den_step)))),
           _rotation_step(_symbol_rotation / TIn_Type(q)),
-          rotation_size(low_sat_1(2 * q * (den_step / low_sat_1(num_step)))),
-          rotation_vect(low_sat_1(2 * q * (den_step / low_sat_1(num_step))) * 2),
+          rotation_size(low_sat_1(2 * q * den_step)),
+          rotation_vect(rotation_size * 2, 0),
           _threshold(threshold) {
 
         memset(rotation_counters, 0, p_omega * sizeof(size_t));
@@ -355,7 +355,7 @@ public:
           _rotation_step(_symbol_rotation / TIn_Type(q)),
           _root_rotations(p_omega, TIn_Type(0)),
           _symbol_root_rotations(p_omega, TIn_Type(0)),
-          rotation_size(low_sat_1(2 * q * (den_step / low_sat_1(num_step)))),
+          rotation_size(low_sat_1(2 * q * den_step)),
           rotation_counter(0),
           _threshold(threshold) {
 

@@ -232,8 +232,10 @@ int main(int argc, char * argv[]) {
         detectors.emplace_back(pn.data(), threshold, step_denominator, step_numerator);
     }
 
+    const bool full_score = vm.count("full-score");
+
     const int runs           = vm["runs"].as<int>() * int(vm["runs"].as<int>() > 0);
-    const int run_per_thread = int(float(runs) / float(threads));
+    const int run_per_thread = int(float(runs) / float(threads * int(!full_score) + int(full_score)));
 
     if (run_per_thread * threads != runs) {
         error_stream << "A total number of run (" << runs << ") not divisible by the number of threads(" << threads << ") is not supported." << endl;
@@ -264,7 +266,6 @@ int main(int argc, char * argv[]) {
 
     const bool complete = vm.count("complete");
 
-    const bool full_score = vm.count("full-score");
 
     string output_path = vm["output-file"].as<string>();
     if (output_path == DEFAULT_SCORE_FILE) {
@@ -329,8 +330,8 @@ int main(int argc, char * argv[]) {
     const size_t cond_update_md = size_t(runs_md / 100);
     const size_t cond_update_fa = size_t(runs_fa / 100);
 
-    const int run_md_per_thread = std::min(run_per_thread, runs_md);
-    const int run_fa_per_thread = std::min(run_per_thread, runs_fa);
+    const int run_md_per_thread = run_per_thread * int(do_md);
+    const int run_fa_per_thread = run_per_thread * int(do_fa);
 
 #pragma omp parallel num_threads(threads) if ((threads > 1) && !full_score) shared(score_mat)
     {
@@ -397,11 +398,10 @@ int main(int argc, char * argv[]) {
             }
 
             if (thread_id == 0) {
-                const size_t done = runs_done + threads;
-                if (done > cond_update_md) {
-                    progressBar(done, runs_md);
+                const size_t done = runs_done++;
+                if (done % cond_update_md == 0) {
+                    progressBar(done, run_md_per_thread);
                 }
-                runs_done = done;
             }
         }
 
@@ -488,11 +488,10 @@ int main(int argc, char * argv[]) {
             }
 
             if (thread_id == 0) {
-                const size_t done = runs_done + threads;
-                if (done > cond_update_fa) {
-                    progressBar(done, runs_fa);
+                const size_t done = runs_done++;
+                if (done % cond_update_fa == 0) {
+                    progressBar(done, run_fa_per_thread);
                 }
-                runs_done = done;
             }
         }
 

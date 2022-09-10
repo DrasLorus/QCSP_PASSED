@@ -168,9 +168,9 @@ public:
     template <typename Tpn>
     CDetectorSerial(Tpn * _pn, TIn_Type threshold, unsigned step_denominator, unsigned step_numerator = 1)
         : score_processors(p_omega, score_proc_t(_pn)),
-          num_step(step_numerator * unsigned(p_omega > 1)),
+          num_step(step_numerator * unsigned(p_omega > 1) * unsigned(step_denominator > 0)),
           den_step(step_denominator * unsigned(p_omega > 1)),
-          _symbol_rotation(TIn_Type(pi_f * if_nan_0(float(num_step) / float(den_step)))),
+          _symbol_rotation(TIn_Type(pi_f * float(num_step) / low_sat_1(float(den_step)))),
           _rotation_step(_symbol_rotation / TIn_Type(q)),
           rotation_size(low_sat_1(2 * q * den_step)),
           rotation_vect(rotation_size * 2, 0),
@@ -349,9 +349,9 @@ public:
     template <typename Tpn>
     CDetectorSerialMult(Tpn * _pn, TIn_Type threshold, unsigned step_denominator, unsigned step_numerator = 1)
         : score_processors(p_omega, score_proc_t(_pn)),
-          num_step(step_numerator * unsigned(p_omega > 1)),
+          num_step(step_numerator * unsigned(p_omega > 1) * unsigned(step_denominator > 0)),
           den_step(step_denominator * unsigned(p_omega > 1)),
-          _symbol_rotation(TIn_Type(pi_f * if_nan_0(float(num_step) / float(den_step)))),
+          _symbol_rotation(TIn_Type(pi_f * float(num_step) / low_sat_1(float(den_step)))),
           _rotation_step(_symbol_rotation / TIn_Type(q)),
           _root_rotations(p_omega, TIn_Type(0)),
           _symbol_root_rotations(p_omega, TIn_Type(0)),

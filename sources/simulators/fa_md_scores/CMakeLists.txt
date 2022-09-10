@@ -36,6 +36,11 @@ foreach (TARGET_N ${FAMD_TARGET_N})
       foreach (TARGET_NORMED ${FAMD_TARGET_NORMED})
         set (LOCAL_SUFFIX N${TARGET_N}_q${TARGET_Q}_w${TARGET_W}_${TARGET_NORMED})
 
+        configure_file (detector_instantiation.cpp.in detector_${LOCAL_SUFFIX}.cpp @ONLY)
+
+        add_library (libdetector_${LOCAL_SUFFIX} OBJECT detector_${LOCAL_SUFFIX}.cpp)
+        target_link_libraries (libdetector_${LOCAL_SUFFIX} PRIVATE detectors)
+
         configure_file (main_N_q_w_normed.cpp.in main_${LOCAL_SUFFIX}.cpp @ONLY)
 
         add_executable (fa_md_simulation_${LOCAL_SUFFIX} main_${LOCAL_SUFFIX}.cpp)
@@ -51,6 +56,7 @@ foreach (TARGET_N ${FAMD_TARGET_N})
                   OpenMP::OpenMP_CXX
                   ${matio}
                   nbldpc_wrap
+                  libdetector_${LOCAL_SUFFIX}
         )
 
         set_target_properties (fa_md_simulation_${LOCAL_SUFFIX} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${FAMD_LOCATION})
@@ -67,6 +73,11 @@ foreach (TARGET_N ${FAMD_TARGET_N})
       foreach (TARGET_NORMED ${FAMD_TARGET_NORMED})
         set (USE_MULT 1)
         set (LOCAL_SUFFIX N${TARGET_N}_q${TARGET_Q}_w${TARGET_W}_${TARGET_NORMED}_mult)
+        
+        configure_file (detector_instantiation.cpp.in detector_${LOCAL_SUFFIX}.cpp @ONLY)
+
+        add_library (libdetector_${LOCAL_SUFFIX} OBJECT detector_${LOCAL_SUFFIX}.cpp)
+        target_link_libraries (libdetector_${LOCAL_SUFFIX} PRIVATE detectors)
 
         configure_file (main_N_q_w_normed.cpp.in main_${LOCAL_SUFFIX}.cpp @ONLY)
 
@@ -83,6 +94,7 @@ foreach (TARGET_N ${FAMD_TARGET_N})
                   OpenMP::OpenMP_CXX
                   ${matio}
                   nbldpc_wrap
+                  libdetector_${LOCAL_SUFFIX}
         )
 
         set_target_properties (fa_md_simulation_${LOCAL_SUFFIX} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${FAMD_LOCATION})

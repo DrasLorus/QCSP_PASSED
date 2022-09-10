@@ -1,0 +1,48 @@
+#include "CDetector/CDetector.hpp"
+
+using namespace QCSP::StandaloneDetector;
+
+/*********************************************/
+/* Constants Definitions *********************/
+/*********************************************/
+static constexpr int  cst_q       = @TARGET_Q@;
+static constexpr int  cst_N       = @TARGET_N@;
+static constexpr int  cst_p_omega = @TARGET_W@;
+static constexpr bool normed      = @TARGET_NORMED@;
+
+/*********************************************/
+/* Constants Deductions **********************/
+/*********************************************/
+static constexpr int   actual_p_omega = cst_p_omega + int(cst_p_omega == 0);
+
+static constexpr CorrelationEngineType correngine = TIME_SLIDING;
+
+#cmakedefine01 USE_MULT
+#if defined(USE_MULT) && (USE_MULT == 1)
+#define TDetector    CDetectorSerialMult
+#define STR_DETECTOR "tsmult"
+#else
+#define TDetector    CDetectorSerial
+#define STR_DETECTOR "ts"
+#endif
+
+namespace {
+
+class Phantom : public TDetector<cst_N, cst_q, actual_p_omega, float, normed, correngine>{
+public:
+    using Base = TDetector<cst_N, cst_q, actual_p_omega, float, normed, correngine>;
+
+    void dummy_process(float re_in, float im_in, Base::state_t * state){
+        Base::process(re_in, im_in, state);
+    }
+    
+    void dummy_process_sqr(float re_in, float im_in, Base::state_t * state){
+        Base::process_sqr(re_in, im_in, state);
+    }
+
+    Phantom(const float * _pn) 
+    : Base(_pn, 450.f, 1, 1) {};
+};
+
+} // namespace 
+

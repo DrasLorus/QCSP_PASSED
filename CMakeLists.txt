@@ -104,7 +104,7 @@ else ()
   add_compile_options (-Wall)
   add_compile_options (-Wextra)
 
-  set (FLAG_WERROR "-pedantic -Werror")
+  set (FLAG_WERROR "-pedantic;-Werror")
   set (LIB_MATH "m")
 
   check_cxx_compiler_flag ("-march=native" MARCH)

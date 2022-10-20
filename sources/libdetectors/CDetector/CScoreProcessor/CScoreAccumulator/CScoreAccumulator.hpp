@@ -84,7 +84,7 @@ public:
         counter = (curr_counter + 1) * uint32_t(curr_counter != (N * q - 1)); // Faster !
         // counter = (curr_counter + 1) % (N * q);
 
-        const uint32_t new_score = old_score + new_max - old_max;
+        const uint32_t new_score = (old_score + new_max) - old_max;
 
         score_registers[score_counter] = new_score;
         fifos_max[curr_counter]        = new_max;

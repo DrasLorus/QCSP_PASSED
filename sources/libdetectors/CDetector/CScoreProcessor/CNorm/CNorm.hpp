@@ -77,34 +77,40 @@ public:
     static constexpr unsigned mask = Tq - 1;
 
 private:
-    uint32_t magn_fifo[q];
+    uint64_t magn_fifo[q];
     uint64_t norm_accumulator;
 
     uint32_t counter;
 
 public:
-    uint32_t process_sqr(int16_t re_in, int16_t im_in) {
+    uint16_t process_sqr(int16_t re_in, int16_t im_in) {
         const uint32_t curr_counter = counter;
 
         const uint64_t curr_sqrn = norm_accumulator;
-        const uint32_t old_magn  = magn_fifo[curr_counter];
+        const uint64_t old_magn  = magn_fifo[curr_counter];
 
-        const uint32_t new_magn = uint32_t(re_in * re_in) + uint32_t(im_in * im_in);
+        // 2 * 16 + 1 > 32 so uint64_t
+        const uint64_t new_magn = uint32_t(re_in * re_in) + uint32_t(im_in * im_in);
 
         const uint64_t new_sqrn = (curr_sqrn + new_magn) - old_magn;
 
         norm_accumulator        = new_sqrn;
-        counter                 = (counter + 1) & mask;
+        counter                 = (curr_counter + 1) & mask;
         magn_fifo[curr_counter] = new_magn;
 
-        return new_sqrn;
+        const uint16_t trunc_sqrn = uint16_t(new_sqrn >> (16 + pow2_log2<q>() + 1));
+
+        //* To deeply debug, include <cstdio> and uncomment the following
+        // fprintf(stderr, "%-8u %-8u %-8lu %-8u %-8lu %-8lu %-8u\n", re_in, im_in, old_magn, curr_counter, new_magn, new_sqrn, trunc_sqrn);
+
+        return trunc_sqrn;
     }
 
     CNorm()
-        : norm_accumulator(1),
+        : norm_accumulator(1LU << (16 + pow2_log2<q>() + 1)),
           counter(0) {
-        memset(magn_fifo, 0, q * sizeof(uint32_t));
-        magn_fifo[q - 1] = 1;
+        memset(magn_fifo, 0, q * sizeof(uint64_t));
+        magn_fifo[q - 1] = 1LU << (16 + pow2_log2<q>() + 1);
     }
 
     virtual ~CNorm() = default;

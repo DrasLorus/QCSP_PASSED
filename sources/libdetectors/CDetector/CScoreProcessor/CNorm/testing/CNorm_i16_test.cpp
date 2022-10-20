@@ -15,8 +15,8 @@ TEST_CASE("CNorm (L2) int16_t works for high snr inputs (q: 64)", "[norm][high][
     constexpr unsigned q     = 64;
     constexpr unsigned In_W  = 16;
     constexpr unsigned In_I  = 4;
-    constexpr unsigned Out_W = 33;
-    constexpr unsigned Out_I = 9;
+    constexpr unsigned Out_W = 16;
+    constexpr unsigned Out_I = 15;
 
     constexpr float in_scale_factor = float(1U << (In_W - In_I));
     constexpr float ot_scale_factor = 1. / float(1 << (Out_W - Out_I));
@@ -62,13 +62,14 @@ TEST_CASE("CNorm (L2) int16_t works for high snr inputs (q: 64)", "[norm][high][
     }
 
     // Initialization Startup
-    for (int64_t i = 0; i < int64_t(q); i++) {
+    for (int64_t i = 0; i < int64_t(q - 1); i++) {
+        INFO("input no " << i);
         REQUIRE_THAT(results[i], Catch::Matchers::WithinAbs(norms_out[i] + ot_scale_factor, 1e-7f));
     }
 
     for (int64_t i = q; i < int64_t(results.size()); i++) {
-        REQUIRE_THAT(results[i], Catch::Matchers::WithinRel(norms_out[i], 1e-9f));
-        // printf("%ld\n", i);
+        INFO("input no " << i);
+        REQUIRE_THAT(results[i], Catch::Matchers::WithinRel(norms_out[i], 1e-5f));
     }
 
     delete proc;
@@ -79,11 +80,12 @@ TEST_CASE("CNorm (L2) int16_t works for low snr inputs (q: 64)", "[norm][low][l2
     constexpr unsigned q     = 64;
     constexpr unsigned In_W  = 16;
     constexpr unsigned In_I  = 6;
-    constexpr unsigned Out_W = 33;
-    constexpr unsigned Out_I = 13;
+    constexpr unsigned Out_W = 16;
+    constexpr unsigned Out_I = 19;
 
     constexpr float in_scale_factor = float(1U << (In_W - In_I));
-    constexpr float ot_scale_factor = 1. / float(1 << (Out_W - Out_I));
+    // constexpr float ot_scale_factor = 1. / float(1 << (Out_W - Out_I));
+    constexpr float ot_scale_factor = float(1 << (Out_I - Out_W));
 
     mat_t * data_file = Mat_Open("../data/test_data_w1_nofreq.mat", MAT_ACC_RDONLY);
     if (not bool(data_file)) {
@@ -126,12 +128,14 @@ TEST_CASE("CNorm (L2) int16_t works for low snr inputs (q: 64)", "[norm][low][l2
     }
 
     // Initialization Startup
-    for (int64_t i = 0; i < int64_t(q); i++) {
-        REQUIRE_THAT(results[i], Catch::Matchers::WithinAbs(norms_out[i] + ot_scale_factor, .5f));
+    for (int64_t i = 0; i < int64_t(q - 1); i++) {
+        INFO("input no " << i);
+        REQUIRE_THAT(results[i], Catch::Matchers::WithinAbs(norms_out[i], ot_scale_factor));
     }
 
     for (int64_t i = q; i < int64_t(results.size()); i++) {
-        REQUIRE_THAT(results[i], Catch::Matchers::WithinRel(norms_out[i], 1e-3f));
+        INFO("input no " << i);
+        REQUIRE_THAT(results[i], Catch::Matchers::WithinAbs(norms_out[i], ot_scale_factor + .5f));
         // printf("%ld\n", i);
     }
 

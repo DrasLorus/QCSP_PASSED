@@ -111,6 +111,7 @@ class CScoreProcessor<TFrameSize, Tq, int16_t, true, variant> {
 
 public:
     static constexpr unsigned q = Tq;
+    static constexpr unsigned p = pow2_log2<q>();
     static constexpr unsigned N = TFrameSize;
 
 private:
@@ -128,13 +129,20 @@ public:
 
     uint64_t process_sqr(int16_t re_in, int16_t im_in) {
 
-        const uint32_t norm_value = std::max(norm_proc.process_sqr(re_in, im_in), 1U << 8);
+        const uint16_t norm_value = std::max(norm_proc.process_sqr(re_in, im_in), uint16_t(1)); // This max is not useful in a real case scenario
 
-        const uint32_t cabs_max = corr_engine.process(re_in, im_in);
+        const uint64_t cabs_max = corr_engine.process(re_in, im_in);
 
-        const uint32_t normed_max = cabs_max / (norm_value >> 8); // Remove some norm to keep dynamics in the correlation
+        const uint64_t normed_max = cabs_max / norm_value;
 
-        return score_accumulator.process(normed_max);
+        const uint32_t trunc_mno = normed_max >> (p - 1);
+
+        const uint32_t score = score_accumulator.process(trunc_mno);
+
+        //* To deeply debug, include <cstdio> and uncomment the following
+        // fprintf(stderr, "%-8u %-8u %-8u %-8lu %-8lu %-8u %-8u\n", re_in, im_in, norm_value, cabs_max, normed_max, trunc_mno, score);
+
+        return score;
     }
 
     template <typename Tpn>

@@ -52,7 +52,10 @@ public:
     virtual uint32_t process(int16_t re_in, int16_t im_in) override {
         int32_t re_it, im_it;
         iterative_adder.process(re_in, im_in, &re_it, &im_it);
-        return corr_abs_max.process(re_it, im_it);
+
+        const uint32_t cabs_max = corr_abs_max.process(re_it, im_it);
+
+        return cabs_max;
     }
 
     template <typename Tpn>

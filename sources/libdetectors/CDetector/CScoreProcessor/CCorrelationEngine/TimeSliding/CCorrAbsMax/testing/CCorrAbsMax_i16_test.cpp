@@ -10,12 +10,13 @@
 using namespace QCSP::StandaloneDetector;
 using std::vector;
 
-TEST_CASE("CCorrAbsMax int16_t works for high snr inputs (q: 64)", "[corrabsmax][high][fixed]") {
+TEST_CASE("CCorrAbsMax int16_t works for high snr inputs (q: 64)", "[corrabsmax][high][fixed][.]") {
 
     constexpr unsigned q     = 64;
+    // constexpr unsigned p     = pow2_log2<q>();
     constexpr unsigned In_W  = 17;
     constexpr unsigned In_I  = 8; // High SNR => High signal power !
-    constexpr unsigned Out_W = 2 * (In_W + pow2_log2<q>()) + 1;
+    constexpr unsigned Out_W = 2 * (In_W + pow2_log2<q>()) + 1 - (16 + 1);
     constexpr unsigned Out_I = 2 * (In_I + pow2_log2<q>()) + 1;
 
     constexpr float  in_scale_factor = float(1U << (In_W - In_I));
@@ -80,7 +81,8 @@ TEST_CASE("CCorrAbsMax int16_t works for high snr inputs (q: 64)", "[corrabsmax]
     }
 
     for (int64_t i = 0; i < int64_t(results.size()); i++) {
-        CHECK_THAT(results[i], Catch::Matchers::WithinAbs(cabs_out[i], 1e-9));
+        INFO("input no " << i);
+        REQUIRE_THAT(results[i], Catch::Matchers::WithinAbs(cabs_out[i], 1e-9));
     }
 
     delete proc;
@@ -91,7 +93,7 @@ TEST_CASE("CCorrAbsMax int16_t works for low snr inputs (q: 64)", "[corrabsmax][
     constexpr unsigned q     = 64;
     constexpr unsigned In_W  = 17;
     constexpr unsigned In_I  = 5;
-    constexpr unsigned Out_W = 2 * (In_W + pow2_log2<q>()) + 1;
+    constexpr unsigned Out_W = 2 * (In_W + pow2_log2<q>()) + 1 - (16 + 1);
     constexpr unsigned Out_I = 2 * (In_I + pow2_log2<q>()) + 1;
 
     constexpr float  in_scale_factor = float(1U << (In_W - In_I));
@@ -142,11 +144,11 @@ TEST_CASE("CCorrAbsMax int16_t works for low snr inputs (q: 64)", "[corrabsmax][
     Mat_VarFree(tmp_mat);
     Mat_Close(data_file);
 
-    CCorrAbsMax<q> * proc = new CCorrAbsMax<q>(pn.data());
+    CCorrAbsMax<q, int16_t> * proc = new CCorrAbsMax<q, int16_t>(pn.data());
 
     vector<float> results(cabs_out.size(), 0.f);
 
-    for (int64_t i = 0; i < int64_t(results.size()); i++) {
+    for (int64_t i = 0; i < int64_t(64*60*5); i++) {
         const int32_t fx_re_in = int32_t(re_in[i] * in_scale_factor);
         const int32_t fx_im_in = int32_t(im_in[i] * in_scale_factor);
 
@@ -155,7 +157,8 @@ TEST_CASE("CCorrAbsMax int16_t works for low snr inputs (q: 64)", "[corrabsmax][
         results[i] = float(double(fx_out) * ot_scale_factor);
     }
 
-    for (int64_t i = 0; i < int64_t(results.size()); i++) {
+    for (int64_t i = 0; i < int64_t(64*60*5); i++) {
+        INFO("input no " << i);
         REQUIRE_THAT(results[i], Catch::Matchers::WithinRel(cabs_out[i], 3e-2f));
     }
 

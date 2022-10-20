@@ -6,6 +6,8 @@
 
 #include "Miscellanous/misc.hpp"
 
+#include <cstdio>
+
 namespace QCSP {
 namespace StandaloneDetector {
 
@@ -74,7 +76,9 @@ class CCorrAbsMax<Tq, int16_t> {
 
 public:
     static constexpr unsigned q    = Tq;
+    static constexpr unsigned p    = pow2_log2<q>();
     static constexpr unsigned mask = q - 1;
+    static constexpr unsigned eta  = 16;
 
 private:
     int8_t   pn[q];
@@ -87,7 +91,7 @@ private:
 public:
     const int8_t * get_pn() const { return pn; }
 
-    uint32_t process(int32_t re_in, int32_t im_in) { // Inputs can be quantified on 17 bits
+    uint32_t process(int32_t re_in, int32_t im_in) { // Inputs can be quantized on 17 bits
 #ifdef USE_PN_XOR_TRICK
         static constexpr uint32_t transit[2] = {0x0, 0xFFFFFFFF};
 #endif
@@ -97,7 +101,7 @@ public:
 #ifdef USE_PN_XOR_TRICK
             const bool pn_u = pn[(u + curr_counter) & mask];
 #else
-            const int8_t  pn_u        = pn[(u + curr_counter) & mask];
+            const int8_t  pn_u = pn[(u + curr_counter) & mask];
 #endif
             const int32_t re_corr_i_u = re_corr_registers[u]; // Correlations are on 17 + log2q bits
             const int32_t im_corr_i_u = im_corr_registers[u]; // Correlations are on 17 + log2q bits
@@ -109,19 +113,39 @@ public:
             const int32_t re_tmp_corr = re_corr_i_u + int32_t(re_in ^ transit_u) + pn_u;
             const int32_t im_tmp_corr = im_corr_i_u + int32_t(im_in ^ transit_u) + pn_u;
 #else
-            const int32_t re_tmp_corr = re_corr_i_u + re_in * pn_u;
-            const int32_t im_tmp_corr = im_corr_i_u + im_in * pn_u;
+            const int32_t re_d = re_in * pn_u; // Can be 17 + 1 sometimes
+            const int32_t im_d = im_in * pn_u; // Can be 17 + 1 sometimes
+
+            const int32_t re_sat_d = (re_d <= -int32_t(1 << (17 - 1)) ? -int32_t(1 << (17 - 1)) + 1 : re_d); // It is thus saturated to 17 bits
+            const int32_t im_sat_d = (im_d <= -int32_t(1 << (17 - 1)) ? -int32_t(1 << (17 - 1)) + 1 : im_d); // It is thus saturated to 17 bits
+
+            const int32_t re_tmp_corr = re_corr_i_u + re_sat_d;
+            const int32_t im_tmp_corr = im_corr_i_u + im_sat_d;
 #endif
 
             re_corr_registers[u] = re_tmp_corr;
             im_corr_registers[u] = im_tmp_corr;
 
             // abs_coor is on 2 * (17 + log2q) + 1 bits, meaning q could be up to 16384 before an overflow
-            abs_corr_registers[u] = uint64_t(re_tmp_corr * re_tmp_corr)
-                                  + uint64_t(im_tmp_corr * im_tmp_corr);
+            abs_corr_registers[u] = uint64_t(int64_t(re_tmp_corr) * int64_t(re_tmp_corr))
+                                  + uint64_t(int64_t(im_tmp_corr) * int64_t(im_tmp_corr));
+
+            // fprintf(stderr, "%-8lu ", abs_corr_registers[u]);
         }
 
-        return max_pow2<q>::max(abs_corr_registers);
+        const uint64_t max_value = max_pow2<q>::max(abs_corr_registers); // 47 bits for q = 64
+
+        constexpr uint64_t sat_value = (1LU << (2 * eta + p + 2)) - 1;
+
+        const uint64_t sat_max = max_value * (max_value <= sat_value)
+                               + sat_value * (max_value > sat_value); // 40 bits for q = 64
+
+        const uint32_t trunc_max = uint32_t(sat_max >> (eta + 1));
+
+        //* To deeply debug, include <cstdio> and uncomment the following
+        // fprintf(stderr, "%-8u %-8u %-8lu %-8lu %-8u\n", re_in, im_in, max_value, sat_max, trunc_max);
+
+        return trunc_max;
     }
 
     template <typename Tpn>

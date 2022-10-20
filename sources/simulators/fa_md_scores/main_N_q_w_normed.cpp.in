@@ -327,8 +327,8 @@ int main(int argc, char * argv[]) {
 
     size_t runs_done = 0LU;
 
-    const size_t cond_update_md = size_t(runs_md / 100);
-    const size_t cond_update_fa = size_t(runs_fa / 100);
+    const size_t cond_update_md = low_sat_1(size_t(runs_md / 100));
+    const size_t cond_update_fa = low_sat_1(size_t(runs_fa / 100));
 
     const int run_md_per_thread = run_per_thread * int(do_md);
     const int run_fa_per_thread = run_per_thread * int(do_fa);
@@ -384,17 +384,12 @@ int main(int argc, char * argv[]) {
             inner_memories[thread_id][current_counter] = *iter_max_score;
 
             if (full_score) {
-                omp_set_lock(&lock_file);
-                write_full_score(score_full, score_mat);
-                omp_unset_lock(&lock_file);
+                safe_write_full_score(score_full, score_mat, &lock_file);
             }
 
             if (current_counter >= inner_memories[thread_id].size() - 1) {
                 inner_counters[thread_id] = 0U;
-
-                omp_set_lock(&lock_file);
-                write_score_md(inner_memories[thread_id], score_mat);
-                omp_unset_lock(&lock_file);
+                safe_write_score_md(inner_memories[thread_id], score_mat, &lock_file);
             }
 
             if (thread_id == 0) {
@@ -409,9 +404,9 @@ int main(int argc, char * argv[]) {
         {
             omp_set_lock(&lock_file);
             for (int thread_id = 0; thread_id < threads; thread_id++) {
-                debug_print("There is remains in thread " << thread_id);
                 const unsigned counter = inner_counters[thread_id];
                 if (counter != 0U) {
+                    debug_print("There is remains in thread " << thread_id);
                     const auto iter = inner_memories[thread_id].cbegin();
 
                     const vector<float> remains(iter, iter + counter);
@@ -474,17 +469,12 @@ int main(int argc, char * argv[]) {
             inner_memories[thread_id][current_counter] = *iter_max_score;
 
             if (full_score) {
-                omp_set_lock(&lock_file);
-                write_full_score(score_full, score_mat);
-                omp_unset_lock(&lock_file);
+                safe_write_full_score(score_full, score_mat, &lock_file);
             }
 
-            if (current_counter >= unsigned(batch_size - 1)) {
+            if (current_counter >= inner_memories[thread_id].size() - 1) {
                 inner_counters[thread_id] = 0U;
-
-                omp_set_lock(&lock_file);
-                write_score_fa(inner_memories[thread_id], score_mat);
-                omp_unset_lock(&lock_file);
+                safe_write_score_fa(inner_memories[thread_id], score_mat, &lock_file);
             }
 
             if (thread_id == 0) {
@@ -501,6 +491,7 @@ int main(int argc, char * argv[]) {
             for (int thread_id = 0; thread_id < threads; thread_id++) {
                 const unsigned counter = inner_counters[thread_id];
                 if (counter != 0U) {
+                    debug_print("There is remains in thread " << thread_id);
                     const auto iter = inner_memories[thread_id].cbegin();
 
                     const vector<float> remains(iter, iter + counter);

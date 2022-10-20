@@ -3,13 +3,11 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <sstream>
+#include <string>
 #include <iostream>
 
 #include <boost/program_options.hpp>
-#include <sstream>
-#include <stdlib.h>
-#include <string.h>
-#include <string>
 
 #include "./config.h"
 
@@ -207,7 +205,7 @@ int main(int argc, char * argv[]) {
         error_stream << "Path is ill-formed at line " << __LINE__ << " (code " << r << ")." << endl;
     }
 
-    const string program_path = string(program_dir, program_dir + wcslen(program_dir)) + "\\fa_md_simulation\\" + program_name;
+    const string program_path = string(program_dir, program_dir + wcslen(program_dir)) + "\\fa_md_simulation\\" + program_name + ".exe";
 
     free(abs_path);
     delete[] program_dir;
@@ -229,24 +227,34 @@ int main(int argc, char * argv[]) {
 
     const string threads_str   = std::to_string(threads);
     const string threshold_str = std::to_string(threshold);
+    const string span_str      = std::to_string(rot_span);
+    const string num_str       = std::to_string(step_num);
+    const string step_str      = std::to_string(step_den);
 
     std::ostringstream os_cmd;
-    os_cmd << program_name.c_str()
-           << "--snr" << snr_str.c_str()
-           << "--runs" << runs_str.c_str()
-           << "--pn-file" << pn_abs_path.c_str()
-           << "--ovmod-file" << ovmod_abs_path.c_str()
-           << "--alist-file" << alist_abs_path.c_str()
-           << "--threads" << threads_str.c_str()
-           << "--output-file" << output_path.c_str()
-           << (have_thres ? "--threshold" : "") << (have_thres ? threshold_str.c_str() : "")
-           << (complete ? "--complete" : "")
-           << (no_fa ? "--no-fa" : "")
-           << (no_md ? "--no-md" : "")
-           << (full_score ? "--full-score" : "") << (char *) NULL;
+    os_cmd << program_name << ".exe"
+           << " --snr " << snr_str
+           << " --runs " << runs_str
+           << " --pn-file " << pn_abs_path
+           << " --ovmod-file " << ovmod_abs_path
+           << " --alist-file " << alist_abs_path
+           << " --threads " << threads_str
+           << " --output-file " << output_path
+           << (have_thres ? " --threshold " : "") << (have_thres ? threshold_str : "")
+           << (have_span ? " --rotation-span " : "") << (have_span ? span_str : "")
+           << (have_num ? " --step-numerator " : "") << (have_num ? num_str : "")
+           << (have_step ? " --step-denominator " : "") << (have_step ? step_str : "")
+           << (complete ? " --complete " : "")
+           << (no_fa ? " --no-fa " : "")
+           << (no_md ? " --no-md " : "")
+           << (full_score ? " --full-score " : "");
+    const string cmdline_str = os_cmd.str();
 
-    char * cmdline = new char[os.str().size() + 1];
-    copy(os.str().begin(), os.str().end(), cmdline);
+    char * cmdline = new char[cmdline_str.size() + 1];
+    for (int i = 0; i < cmdline_str.size(); i++) {
+        cmdline[i] = cmdline_str[i];
+    }
+    cmdline[cmdline_str.size()] = (char) NULL;
 
     STARTUPINFOA        si;
     PROCESS_INFORMATION pi;
@@ -255,19 +263,19 @@ int main(int argc, char * argv[]) {
     si.cb = sizeof(si);
     ZeroMemory(&pi, sizeof(pi));
 
-    const int have_failed = CreateProcessA(
+    const int success = CreateProcessA(
         program_path.c_str(),
         cmdline,
         nullptr,
         nullptr,
-        FALSE,
+        TRUE,
         0,
         nullptr,
         nullptr,
         &si,
         &pi);
 
-    if (have_failed) {
+    if (!success) {
         error_stream << "CreateProcess failed for " << program_path << " (code " << GetLastError() << ")." << endl;
         delete[] cmdline;
         exit(EXIT_FAILURE);

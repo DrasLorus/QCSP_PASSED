@@ -88,6 +88,31 @@ void write_full_score(const vector<vector<float>> & scores, FILE * score_file) {
     }
 }
 
+
+void safe_write_score_fa(const std::vector<float> & score, mat_t * score_mat, omp_lock_t * lock) {
+    omp_set_lock(lock);
+    write_score_fa(score, score_mat);
+    omp_unset_lock(lock);
+}
+
+void safe_write_score_md(const std::vector<float> & score, mat_t * score_mat, omp_lock_t * lock) {
+    omp_set_lock(lock);
+    write_score_md(score, score_mat);
+    omp_unset_lock(lock);
+}
+
+void safe_write_full_score(const std::vector<std::vector<float>> & scores, mat_t * score_mat, omp_lock_t * lock) {
+    omp_set_lock(lock);
+    write_full_score(scores, score_mat);
+    omp_unset_lock(lock);
+}
+
+void safe_write_full_score(const std::vector<std::vector<float>> & scores, FILE * score_file, omp_lock_t * lock) {
+    omp_set_lock(lock);
+    write_full_score(scores, score_file);
+    omp_unset_lock(lock);
+}
+
 } // namespace Utilities
 } // namespace StandaloneDetector
 } // namespace QCSP

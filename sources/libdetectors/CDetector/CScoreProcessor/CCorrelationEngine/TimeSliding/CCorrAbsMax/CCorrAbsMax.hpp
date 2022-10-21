@@ -84,7 +84,7 @@ private:
     int8_t   pn[q];
     int32_t  re_corr_registers[q];
     int32_t  im_corr_registers[q];
-    uint64_t abs_corr_registers[q];
+    uint32_t abs_corr_registers[q];
 
     uint32_t counter;
 
@@ -127,25 +127,29 @@ public:
             im_corr_registers[u] = im_tmp_corr;
 
             // abs_coor is on 2 * (17 + log2q) + 1 bits, meaning q could be up to 16384 before an overflow
-            abs_corr_registers[u] = uint64_t(int64_t(re_tmp_corr) * int64_t(re_tmp_corr))
-                                  + uint64_t(int64_t(im_tmp_corr) * int64_t(im_tmp_corr));
+            const uint64_t full_abs_corr = uint64_t(int64_t(re_tmp_corr) * int64_t(re_tmp_corr))
+                                         + uint64_t(int64_t(im_tmp_corr) * int64_t(im_tmp_corr));
+
+            constexpr uint64_t saturation_th = (1LU << (2 * eta + p + 2)) - 1; // 40 bits for q = 64
+
+            const bool saturate = full_abs_corr > saturation_th;
+
+            const uint64_t sat_abs_corr = full_abs_corr * uint64_t(not saturate)
+                                        + saturation_th * uint64_t(saturate);
+
+            const uint32_t trunc_max = uint32_t(sat_abs_corr >> (eta + 1));
+
+            abs_corr_registers[u] = trunc_max;
 
             // fprintf(stderr, "%-8lu ", abs_corr_registers[u]);
         }
 
-        const uint64_t max_value = max_pow2<q>::max(abs_corr_registers); // 47 bits for q = 64
-
-        constexpr uint64_t sat_value = (1LU << (2 * eta + p + 2)) - 1;
-
-        const uint64_t sat_max = max_value * (max_value <= sat_value)
-                               + sat_value * (max_value > sat_value); // 40 bits for q = 64
-
-        const uint32_t trunc_max = uint32_t(sat_max >> (eta + 1));
+        const uint32_t max_value = max_pow2<q>::max(abs_corr_registers); // 47 bits for q = 64
 
         //* To deeply debug, include <cstdio> and uncomment the following
-        // fprintf(stderr, "%-8u %-8u %-8lu %-8lu %-8u\n", re_in, im_in, max_value, sat_max, trunc_max);
+        // fprintf(stderr, "%-8u %-8u %-8lu %-8lu %-8u\n", re_in, im_in, max_value);
 
-        return trunc_max;
+        return max_value;
     }
 
     template <typename Tpn>
@@ -161,7 +165,7 @@ public:
 
         memset(re_corr_registers, 0, sizeof(int32_t) * q);
         memset(im_corr_registers, 0, sizeof(int32_t) * q);
-        memset(abs_corr_registers, 0, sizeof(uint64_t) * q);
+        memset(abs_corr_registers, 0, sizeof(uint32_t) * q);
     }
 
     virtual ~CCorrAbsMax() = default;

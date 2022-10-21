@@ -330,8 +330,8 @@ int main(int argc, char * argv[]) {
 
     size_t runs_done = 0LU;
 
-    const size_t cond_update_md = low_sat_1(size_t(runs_md / 100));
-    const size_t cond_update_fa = low_sat_1(size_t(runs_fa / 100));
+    const size_t cond_update_md = low_sat_1(size_t(run_md_per_thread / 100));
+    const size_t cond_update_fa = low_sat_1(size_t(run_fa_per_thread / 100));
 
     const int run_md_per_thread = run_per_thread * int(do_md);
     const int run_fa_per_thread = run_per_thread * int(do_fa);

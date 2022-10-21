@@ -95,7 +95,13 @@ include (CheckCXXCompilerFlag)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   message (AUTHOR_WARNING "MSVC detected, adding specific options.")
-  add_compile_options (/permissive- /W4 /wd4244 /wd4305 /wd4723)
+  add_compile_options (
+    /permissive-
+    /W4
+    /wd4244
+    /wd4305
+    /wd4723
+  )
   add_compile_definitions (_CRT_SECURE_NO_WARNINGS=1)
 
   set (FLAG_WERROR "/WX")

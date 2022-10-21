@@ -127,7 +127,7 @@ public:
     const bool * get_pn() const { return corr_engine.get_pn(); }
 #endif
 
-    uint64_t process_sqr(int16_t re_in, int16_t im_in) {
+    uint32_t process_sqr(int16_t re_in, int16_t im_in) {
 
         const uint16_t norm_value = std::max(norm_proc.process_sqr(re_in, im_in), uint16_t(1)); // This max is not useful in a real case scenario
 

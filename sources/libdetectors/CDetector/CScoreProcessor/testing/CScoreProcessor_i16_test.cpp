@@ -151,7 +151,7 @@ TEST_CASE("CScoreProcessor int16_t works for low snr inputs (q: 64, N: 60)", "[s
         const int16_t fx_re_in = int16_t(re_in[i] * in_scale_factor);
         const int16_t fx_im_in = int16_t(im_in[i] * in_scale_factor);
 
-        const uint64_t fx_score = proc->process_sqr(fx_re_in, fx_im_in);
+        const uint32_t fx_score = proc->process_sqr(fx_re_in, fx_im_in);
 
         results[i] = float(fx_score) * ot_scale_factor;
     }

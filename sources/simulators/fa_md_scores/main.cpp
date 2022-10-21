@@ -3,9 +3,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <string>
-#include <iostream>
 
 #include <boost/program_options.hpp>
 
@@ -51,7 +51,8 @@ int main(int argc, char * argv[]) {
         "no-fa", "disable False Alarm scenario")(
         "no-md", "disable Miss Detection scenario")(
         "raw", "disable normalization")(
-        "mult", "use mult-based detector")(
+        // "mult", "use mult-based detector")( // ENABLE THAT WITH USE_MULT IN CMAKE
+        "type", po::value<string>()->default_value("float"), "Type to use. Supported types are 'float' and 'int16_t'.")(
         "full-score", "log the full score instead of only the maximum one (WARNING: LARGE FILES AND HEAVY PERFORMANCE IMPACT)")(
         "output-file,o", po::value<string>()->default_value(DEFAULT_SCORE_FILE), "score file to write");
 
@@ -93,8 +94,14 @@ int main(int argc, char * argv[]) {
     const bool     no_fa       = vm.count("no-fa");
     const bool     no_md       = vm.count("no-md");
     const bool     normed      = !vm.count("raw");
+    const string   type        = vm["type"].as<string>();
     const bool     full_score  = vm.count("full-score");
     const string   output_path = vm["output-file"].as<string>();
+
+    if ((type != "float") and (type != "int16_t")) {
+        error_stream << "Supported types are 'float' or 'int16_t' and you have provided " << type << "." << endl;
+        exit(EXIT_FAILURE);
+    }
 
     FILE * alist = fopen(alist_path.c_str(), "r");
     if (!bool(alist)) {
@@ -111,12 +118,13 @@ int main(int argc, char * argv[]) {
     }
     fclose(alist);
 
-    const bool use_mult = vm.count("mult");
+    constexpr bool use_mult = bool(USE_MULT);
 
     std::ostringstream os;
     os << "fa_md_simulation_N" << N
        << "_q" << q
        << "_w" << p_omega
+       << "_" << type
        << "_" << int(normed)
        << (use_mult ? "_mult" : "");
 

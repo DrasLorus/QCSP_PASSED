@@ -17,8 +17,7 @@ project (QCSP_PASSED LANGUAGES CXX VERSION 0.1)
 # this sets the project name
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-  message (AUTHOR_WARNING "Windows detected, adding vcpkg support.")
-  add_subdirectory (windows)
+  message (AUTHOR_WARNING "Windows detected, you may want to read the dedicated part of the README.md file.")
 endif ()
 
 # ##########################################################################################################################################

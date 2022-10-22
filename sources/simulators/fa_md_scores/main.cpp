@@ -11,11 +11,11 @@
 
 #include "./config.h"
 
-#if defined(HAVE_UNISTD_H) && (HAVE_UNISTD_H == 1)
+#if defined(USE_UNISTD_API) && (USE_UNISTD_API == 1)
 #include <libgen.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#elif defined(_MSC_VER)
+#elif defined(USE_WINDOWS_API) && (USE_WINDOWS_API == 1)
 #include <windows.h>
 
 #include <pathcch.h>
@@ -130,7 +130,7 @@ int main(int argc, char * argv[]) {
 
     const string program_name = os.str();
 
-#if defined(_POSIX_VERSION)
+#if defined(_POSIX_VERSION) && defined(USE_UNISTD_API)
     char * abs_path    = realpath(argv[0], nullptr);
     char * program_dir = dirname(abs_path);
 
@@ -202,7 +202,7 @@ int main(int argc, char * argv[]) {
         perror("Failed to fork the process.");
         exit(EXIT_FAILURE);
     }
-#elif defined(_MSC_VER)
+#elif defined(USE_WINDOWS_API) && (USE_WINDOWS_API == 1)
 
     char *    abs_path    = _fullpath(nullptr, argv[0], 256);
     wchar_t * program_dir = new wchar_t[strlen(abs_path)];
@@ -259,7 +259,7 @@ int main(int argc, char * argv[]) {
     const string cmdline_str = os_cmd.str();
 
     char * cmdline = new char[cmdline_str.size() + 1];
-    for (int i = 0; i < cmdline_str.size(); i++) {
+    for (int i = 0; i < int(cmdline_str.size()); i++) {
         cmdline[i] = cmdline_str[i];
     }
     cmdline[cmdline_str.size()] = (char) NULL;
@@ -297,6 +297,8 @@ int main(int argc, char * argv[]) {
     CloseHandle(pi.hThread);
 
     delete[] cmdline;
+#else
+#error "No supported fork/exec API has been found."
 #endif
     return EXIT_SUCCESS;
 }

@@ -10,7 +10,7 @@
 using namespace QCSP::StandaloneDetector;
 using std::vector;
 
-TEST_CASE("CCorrAbsMax int16_t works for high snr inputs (q: 64)", "[corrabsmax][high][fixed][.]") {
+TEST_CASE("CCorrAbsMax int16_t works for high snr inputs (q: 64)", "[corrabsmax][high][fixed]") {
 
     constexpr unsigned q     = 64;
     // constexpr unsigned p     = pow2_log2<q>();

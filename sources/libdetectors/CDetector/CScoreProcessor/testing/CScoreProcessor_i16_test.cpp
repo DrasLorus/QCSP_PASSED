@@ -9,7 +9,7 @@
 using namespace QCSP::StandaloneDetector;
 using std::vector;
 
-TEST_CASE("CScoreProcessor int16_t works for high snr inputs (q: 64, N: 60)", "[scoreproc][high][fixed][.]") {
+TEST_CASE("CScoreProcessor int16_t works for high snr inputs (q: 64, N: 60)", "[scoreproc][high][fixed]") {
 
     constexpr unsigned q     = 64;
     constexpr unsigned N     = 60;

@@ -1,7 +1,8 @@
 #ifndef _QCSP_PASSED_FA_MD_CONFIG_H_
 #define _QCSP_PASSED_FA_MD_CONFIG_H_
 
-#cmakedefine HAVE_UNISTD_H 1
+#cmakedefine USE_UNISTD_API 1
+#cmakedefine USE_WINDOWS_API 1
 
 #define DEFAULT_SCORE_FILE "score_fa_md_<method>_<normed>_<complete>_<type>_snr<snr>_q<GF>_d<p_delta>_w<p_omega>_step<num>_<den>_span<span>.mat"
 

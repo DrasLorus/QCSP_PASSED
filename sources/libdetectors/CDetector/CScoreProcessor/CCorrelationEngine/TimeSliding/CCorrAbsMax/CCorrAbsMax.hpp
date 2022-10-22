@@ -130,7 +130,7 @@ public:
             const uint64_t full_abs_corr = uint64_t(int64_t(re_tmp_corr) * int64_t(re_tmp_corr))
                                          + uint64_t(int64_t(im_tmp_corr) * int64_t(im_tmp_corr));
 
-            constexpr uint64_t saturation_th = (1LU << (2 * eta + p + 2)) - 1; // 40 bits for q = 64
+            constexpr uint64_t saturation_th = (1LLU << (2 * eta + p + 2)) - 1LLU; // 40 bits for q = 64
 
             const bool saturate = full_abs_corr > saturation_th;
 

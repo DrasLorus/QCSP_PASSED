@@ -50,22 +50,28 @@ cmake --build build -j 4
 
 ### Windows special case
 
-Windows 10 (21H2) has also been tested and validated, thanks to
-[vcpkg](https://vcpkg.io/en/index.html). It requires to clone the repository with its submodule
-(using `--recursive`) or run `git submodule init && git submodule update` for an already cloned
-repo. Then, `vcpkg` must be bootstrapped. A target `vcpkg` has been conveniently added to the main
-CMakeLists.txt, however, it may refuse to generate if dependencies are missing. To solves that, go
-under the [windows directory](./windows), run cmake on the local CMakeLists.txt, and build the
-target `vcpkg`.
-Then everything should work the same, provided you give cmake the toolchain of vcpkg
-(`CMAKE_TOOLCHAIN_FILE=<repo root>/windows/vcpkg/scripts/buildsystems/vcpkg.cmake`)
+Windows 10 (21H2) has also been tested and validated, using
 
-In summary, in powershell, do:
+- MinGW64 GCC and [MSYS2](https://www.msys2.org/),
+- MSVC thanks to [vcpkg](https://vcpkg.io/en/index.html).
+
+It requires to clone the repository with its submodule (using `--recursive`) or run `git submodule init && git submodule update` for an already cloned repo.
+Then, `vcpkg` must be bootstrapped. A target `vcpkg` has been conveniently added to the CMakeLists.txt inside the [windows directory](./windows).
+Go under the directory, run cmake on the local CMakeLists.txt, and build the target `vcpkg`.
+Then everything should work the same, provided you give cmake the toolchain of vcpkg (`CMAKE_TOOLCHAIN_FILE=<repo root>/windows/vcpkg/scripts/buildsystems/vcpkg.cmake`)
+
+In summary, in any case, in powershell (hit `win + x`, then select powershell), do:
 
 ```powershell
 git clone --recursive <url.git> QCSP_PASSED
 cd QCSP_PASSED
+```
 
+---
+
+Then, to use MSVC with `vcpkg`, from the QCSP_PASSED directory, do:
+
+```powershell
 cd windows
 
 cmake -B build -S .
@@ -73,14 +79,37 @@ cmake --build build -t vcpkg
 
 cd ..
 
+.\windows\vcpkg\vcpkg.exe install matio[mat73]:x64-windows boost-program-options:x64-windows
+
 cmake -B build -S . -DCMAKE_BUILD_TYPE:STRING=Release -DENABLE_SYSTEM_CATCH2:BOOL=OFF -DCMAKE_TOOLCHAIN_FILE=$(pwd)/windows/vcpkg/scripts/buildsystems/vcpkg.cmake
+
 cmake --build build -j 4
 ```
 
-If it fails, first ensure you have git and cmake installed ([winget](https://github.com/microsoft/winget-cli)
-is recommended for the matter) and that you have a supported compiler (currently, only MSVC++).
+If it fails, first ensure that you have git and cmake installed ([winget](https://github.com/microsoft/winget-cli)
+is recommended for the matter) and that you have MSVC (if not, run `winget install Microsoft.VisualStudio.2022.BuildTools`, then install C/C++ development utilities).
 Then, if vcpkg is successfully bootstrapped, but dependencies aren't added automatically,
 [check your configuration](https://vcpkg.io/en/docs/users/buildsystems/cmake-integration.html), or [install dependencies manually](https://vcpkg.io/en/docs/examples/installing-and-using-packages.html).
+
+---
+
+To use MSYS2, from the QCSP_PASSED directory, do:
+
+```powershell
+cmake -B build -S . -DCMAKE_BUILD_TYPE:STRING=Release -DENABLE_SYSTEM_CATCH2:BOOL=OFF -G Ninja -DCMAKE_CXX_COMPILER=<path/to/msys-root>/ucrt64/bin/g++ -DCMAKE_C_COMPILER=<path/to/msys-root>/ucrt64/bin/gcc
+
+cmake --build build -j 4
+```
+
+If it fails, yet again, first ensure that you have git and cmake installed ([winget](https://github.com/microsoft/winget-cli)
+is recommended for the matter) and that you have MSYS2 (if not, run `winget install msys2.msys2`, then follow the [installation procedure](https://www.msys2.org/), but be sure to use UCRT64).
+Then, inside the MSYS2 UCRT64 shell, run
+
+```bash
+pacman -S --needed mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-boost mingw-w64-ucrt-x86_64-matio
+```
+
+It should work afterward.
 
 ## Testing
 

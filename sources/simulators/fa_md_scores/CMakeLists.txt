@@ -3,6 +3,15 @@ find_package (Boost COMPONENTS program_options REQUIRED)
 
 include (CheckIncludeFiles)
 check_include_files ("unistd.h" HAVE_UNISTD_H)
+check_include_files ("windows.h" HAVE_WINDOWS_H)
+
+if (WIN32 AND HAVE_WINDOWS_H)
+  set (USE_UNISTD_API OFF)
+  set (USE_WINDOWS_API ON)
+elseif (HAVE_UNISTD_H)
+  set (USE_UNISTD_API ON)
+  set (USE_WINDOWS_API OFF)
+endif ()
 
 option (ENABLE_FAMD_MULT "Wether or not you want to instantiate plain multipliers. No benefit." OFF)
 set (USE_MULT ${ENABLE_FAMD_MULT} CACHE INTERNAL "" FORCE)
@@ -11,7 +20,7 @@ configure_file (config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config.h)
 
 add_executable (fa_md_simulator main.cpp)
 target_link_libraries (fa_md_simulator PRIVATE Boost::program_options)
-if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+if (USE_WINDOWS_API)
   target_link_libraries (fa_md_simulator PRIVATE Pathcch.lib)
 endif ()
 

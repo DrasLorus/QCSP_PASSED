@@ -24,11 +24,11 @@ public:
     void process(Tin_type re_in, Tin_type im_in, Tin_type * re_out, Tin_type * im_out) {
         const unsigned curr_cnt = counter;
 
-        const Tin_type old_re = fifo_re[counter];
-        const Tin_type old_im = fifo_im[counter];
+        const Tin_type old_re = fifo_re[curr_cnt];
+        const Tin_type old_im = fifo_im[curr_cnt];
 
-        fifo_re[counter] = re_in;
-        fifo_im[counter] = im_in;
+        fifo_re[curr_cnt] = re_in;
+        fifo_im[curr_cnt] = im_in;
 
         counter = (curr_cnt + 1) & cnt_mask;
 

@@ -20,20 +20,28 @@ public:
     static constexpr unsigned mask = q - 1;
 
 private:
+    /**
+     * @brief reference PN sequence
+     *
+     */
     TIn_Type pn[q];
+
+    /**
+     * @brief used PN sequence
+     *
+     */
+    TIn_Type rotating_pn[q];
+
     TIn_Type re_corr_registers[q];
     TIn_Type im_corr_registers[q];
     TIn_Type abs_corr_registers[q];
-
-    uint32_t counter;
 
 public:
     const TIn_Type * get_pn() const { return pn; }
 
     TIn_Type process(TIn_Type re_in, TIn_Type im_in) {
-        const uint32_t curr_counter = counter++;
         for (unsigned u = 0; u < q; u++) {
-            const TIn_Type re_pn_u     = pn[(u + curr_counter) & mask];
+            const TIn_Type re_pn_u     = rotating_pn[u];
             const TIn_Type re_corr_i_u = re_corr_registers[u];
             const TIn_Type im_corr_i_u = im_corr_registers[u];
 
@@ -47,13 +55,15 @@ public:
             abs_corr_registers[u] = re_tmp_corr * re_tmp_corr + im_tmp_corr * im_tmp_corr;
         }
 
+        std::rotate(rotating_pn, rotating_pn + 1, rotating_pn + q);
+
         return max_pow2<q>::max(abs_corr_registers);
     }
 
     template <typename Tpn>
-    CCorrAbsMax(Tpn * _pn)
-        : counter(0) {
+    CCorrAbsMax(Tpn * _pn) {
         std::copy(_pn, _pn + q, pn);
+        std::copy(_pn, _pn + q, rotating_pn);
 
         memset(re_corr_registers, 0, sizeof(TIn_Type) * q);
         memset(im_corr_registers, 0, sizeof(TIn_Type) * q);

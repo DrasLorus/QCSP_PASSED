@@ -13,9 +13,6 @@ elseif (HAVE_UNISTD_H)
   set (USE_WINDOWS_API OFF)
 endif ()
 
-option (ENABLE_FAMD_MULT "Wether or not you want to instantiate plain multipliers. No benefit." OFF)
-set (USE_MULT ${ENABLE_FAMD_MULT} CACHE INTERNAL "" FORCE)
-
 configure_file (config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config.h)
 
 add_executable (fa_md_simulator main.cpp)

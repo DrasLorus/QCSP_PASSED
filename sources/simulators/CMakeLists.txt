@@ -1,4 +1,3 @@
-
 option (ENABLE_FAMD_MULT "Wether or not you want to instantiate plain multipliers. No benefit." OFF)
 set (USE_MULT ${ENABLE_FAMD_MULT} CACHE INTERNAL "" FORCE)
 

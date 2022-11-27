@@ -200,7 +200,7 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}/sources ${matio_INCLUDEDIR})
 
 set (LIST_TARGET_Q "64;128;256;512" CACHE STRING "Value of q to test.")
 set (LIST_TARGET_N "60" CACHE INTERNAL "" FORCE) # Currently not supported
-set (LIST_TARGET_W "1") # Currently not supported
+set (LIST_TARGET_W "1" CACHE STRING "Value of p_omega to test.")
 
 if (ENABLE_TESTING)
   include (CTest)

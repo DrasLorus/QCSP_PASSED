@@ -3,6 +3,7 @@
 #include <boost/program_options/positional_options.hpp>
 #include <cstdio>
 #include <cstdlib>
+#include <iomanip>
 #include <iostream>
 #include <matio.h>
 #include <ostream>
@@ -19,9 +20,9 @@ using std::atomic;
 using std::string;
 using std::vector;
 
-constexpr unsigned N       = 60;
-constexpr unsigned q       = 64;
-constexpr unsigned p_omega = 5;
+constexpr unsigned N       = @TARGET_N@;
+constexpr unsigned q       = @TARGET_Q@;
+constexpr unsigned p_omega = @TARGET_W@;
 
 typedef QCSP::StandaloneDetector::CDetectorSerial<N, q, p_omega, float, true> detector_t;
 using state_t = detector_t::state_t;
@@ -31,7 +32,7 @@ using state_t = detector_t::state_t;
 static atomic<bool> stop_signal_not_called {true};
 
 void sig_int_handler(int) {
-    std::cerr << "\n  Stop signal received.\n  Stopping..." << std::endl;
+    std::cerr << "\n\n * Stop signal received.\n * Stopping...\n" << std::endl;
     stop_signal_not_called = false;
 }
 #else
@@ -120,7 +121,12 @@ int main(int argc, char * argv[]) {
 #else
 #error "Not supported yet."
 #endif
+    if (num_detections != INT_MAX) {
+        std::cout << "Running " << (float) num_detections << " detections." << std::endl;
+    }
 
+    std::cout << "To stop the program early, enter CTRL+C (SIGINT)." << std::endl;
+    
     detector_t * detector = new detector_t(pn.data(), 450.f, 0);
 
     state_t state {};
@@ -133,8 +139,13 @@ int main(int argc, char * argv[]) {
     state.chip_since_last_det = 0;
     std::memset(state.scores, 0, p_omega * sizeof(float));
 
-    int i = 0;
-    while ((i++ <= num_detections) && stop_signal_not_called) {
+    long long int i = 0;
+    while ((++i <= num_detections) && stop_signal_not_called) {
         detector->process(0.56f, -0.56f, &state);
     }
+    
+    const long long unsigned actual_num_dets = (long long unsigned)(i) - 1LLU;
+
+    std::cout << "Actually performed " << std::setprecision(1) << actual_num_dets << " (~" << (double) actual_num_dets << ") detections." << std::endl;
+
 }

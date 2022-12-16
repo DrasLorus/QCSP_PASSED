@@ -110,3 +110,6 @@ data/generator_script.m
 # CMake configured files
 sources/simulators/fa_md_scores/config.h
 sources/simulators/latency_throughput/config.h
+
+# Documentation
+documentation/doxygen

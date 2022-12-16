@@ -215,3 +215,11 @@ endif ()
 # Create the 'detector' target
 add_subdirectory (sources/libdetectors)
 add_subdirectory (sources/simulators)
+
+# ##########################################################################################################################################
+# Generate Docs
+# ##########################################################################################################################################
+option (BUILD_WITH_DOCS "Generate Docs" ON)
+if (BUILD_WITH_DOCS)
+  add_subdirectory (${CMAKE_CURRENT_SOURCE_DIR}/documentation)
+endif ()

@@ -1,9 +1,7 @@
 #ifndef _QCSP_PASSED_DETECTION_STATE_TEMPLATE_HPP_
 #define _QCSP_PASSED_DETECTION_STATE_TEMPLATE_HPP_ 1
 
-#include <stdexcept>
-#include <string>
-#include <vector>
+#include <cstdint>
 
 namespace QCSP {
 namespace StandaloneDetector {

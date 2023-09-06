@@ -26,16 +26,30 @@ constexpr unsigned p_omega = 5;
 typedef QCSP::StandaloneDetector::CDetectorSerial<N, q, p_omega, float, true> detector_t;
 using state_t = detector_t::state_t;
 
+static atomic<bool> stop_signal_not_called {true};
+
 #if !defined(USE_WINDOWS_API) && defined(USE_UNISTD_API)
 #include <csignal>
-static atomic<bool> stop_signal_not_called {true};
 
 void sig_int_handler(int) {
     std::cerr << "\n  Stop signal received.\n  Stopping..." << std::endl;
     stop_signal_not_called = false;
 }
 #else
-#error "Not supported yet."
+#include <windows.h>
+
+BOOL WINAPI CtrlHandler(DWORD fdwCtrlType) {
+    switch (fdwCtrlType) {
+        // Handle the CTRL-C signal.
+        case CTRL_C_EVENT:
+            std::cerr << "\n\n * Stop signal received.\n * Stopping...\n"
+                      << std::endl;
+            stop_signal_not_called = false;
+            return TRUE;
+        default:
+            return FALSE;
+    }
+}
 #endif
 
 int main(int argc, char * argv[]) {
@@ -118,7 +132,10 @@ int main(int argc, char * argv[]) {
         exit(EXIT_FAILURE);
     }
 #else
-#error "Not supported yet."
+    if (not SetConsoleCtrlHandler(CtrlHandler, TRUE)) {
+        std::cerr << "\nERROR: Could not set control handler" << std::endl;
+        exit(EXIT_FAILURE);
+    }
 #endif
 
     detector_t * detector = new detector_t(pn.data(), 450.f, 0);

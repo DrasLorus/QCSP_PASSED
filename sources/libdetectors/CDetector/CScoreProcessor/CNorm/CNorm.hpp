@@ -107,10 +107,10 @@ public:
     }
 
     CNorm()
-        : norm_accumulator(1LU << (16 + pow2_log2<q>() + 1)),
+        : norm_accumulator(1LLU << (16 + pow2_log2<q>() + 1)),
           counter(0) {
         memset(magn_fifo, 0, q * sizeof(uint64_t));
-        magn_fifo[q - 1] = 1LU << (16 + pow2_log2<q>() + 1);
+        magn_fifo[q - 1] = 1LLU << (16 + pow2_log2<q>() + 1);
     }
 
     virtual ~CNorm() = default;

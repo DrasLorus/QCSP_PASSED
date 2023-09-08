@@ -1,4 +1,5 @@
-add_library (l2norm OBJECT CNorm.cpp)
+add_library (l2norm STATIC CNorm.cpp)
+add_library (l2norm_generic STATIC CNormGeneric.cpp)
 
 if (ENABLE_TESTING)
   include (CTest)
@@ -9,4 +10,8 @@ if (ENABLE_TESTING)
 
   catch_discover_tests (l2norm_tests WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
+  add_executable (l2norm_generic_tests testing/CNormGeneric_test.cpp)
+  target_link_libraries (l2norm_generic_tests PUBLIC l2norm_generic catch_common_${PROJECT_NAME} ${matio})
+
+  catch_discover_tests (l2norm_generic_tests WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 endif ()

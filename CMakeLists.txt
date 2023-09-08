@@ -206,7 +206,7 @@ if (ENABLE_TESTING)
   include (CTest)
   include (Catch)
 
-  add_library (catch_common_${PROJECT_NAME} OBJECT sources/testing/main_catch2.cpp)
+  add_library (catch_common_${PROJECT_NAME} SHARED sources/testing/main_catch2.cpp)
   target_link_libraries (catch_common_${PROJECT_NAME} PUBLIC Catch2::Catch2)
 
   add_subdirectory (data)

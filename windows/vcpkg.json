@@ -1,0 +1,23 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "qcsp-passed",
+  "version": "0.0.1",
+  "dependencies": [
+    "boost-program-options",
+    {
+      "name": "matio",
+      "features": [
+        "hdf5",
+        "mat73"
+      ]
+    },
+    "catch2"
+  ],
+  "overrides": [
+    {
+      "name": "catch2",
+      "version": "2.13.9"
+    }
+  ],
+  "builtin-baseline": "934a99dc13cabb330824ae1a5ab4a53a9acc5a49"
+}

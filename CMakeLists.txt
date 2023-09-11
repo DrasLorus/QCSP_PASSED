@@ -16,6 +16,8 @@ set (CMAKE_EXPORT_COMPILE_COMMANDS true)
 project (QCSP_PASSED LANGUAGES CXX VERSION 0.1)
 # this sets the project name
 
+include (cpack)
+
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
   message (AUTHOR_WARNING "Windows detected, you may want to read the dedicated part of the README.md file.")
 endif ()
@@ -71,7 +73,7 @@ get_filename_component (matio_INCLUDEDIR ${matio_HEADER} DIRECTORY CACHE)
 # find_package (Threads REQUIRED)
 
 if (ENABLE_SYSTEM_CATCH2)
-  find_package (Catch2 QUIET)
+  find_package (Catch2 CONFIG QUIET)
   if (((NOT Catch2_FOUND) OR (Catch2_VERSION VERSION_LESS 2.13)) AND ENABLE_TESTING)
     message (FATAL_ERROR "Catch2 not found, and you asked to use a system provided version. Please install Catch v2.x (x > 13)")
   endif ()
@@ -100,6 +102,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     /wd4244
     /wd4305
     /wd4723
+    /wd4267
   )
   add_compile_definitions (_CRT_SECURE_NO_WARNINGS=1)
 
@@ -206,7 +209,7 @@ if (ENABLE_TESTING)
   include (CTest)
   include (Catch)
 
-  add_library (catch_common_${PROJECT_NAME} SHARED sources/testing/main_catch2.cpp)
+  add_library (catch_common_${PROJECT_NAME} OBJECT sources/testing/main_catch2.cpp)
   target_link_libraries (catch_common_${PROJECT_NAME} PUBLIC Catch2::Catch2)
 
   add_subdirectory (data)

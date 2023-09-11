@@ -113,3 +113,8 @@ sources/simulators/latency_throughput/config.h
 
 # Documentation
 documentation/doxygen
+
+# Windows / VCPKG
+vcpkg.json
+!windows/vcpkg.json
+vcpkg_installed

@@ -55,8 +55,6 @@ void safe_write_full_score(const std::vector<std::vector<float>> & scores, mat_t
 
 void safe_write_full_score(const std::vector<std::vector<float>> & scores, FILE * score_file, omp_lock_t * lock);
 
-
-
 void write_score_fa(const std::vector<uint32_t> & score, mat_t * score_mat);
 
 void write_score_md(const std::vector<uint32_t> & score, mat_t * score_mat);

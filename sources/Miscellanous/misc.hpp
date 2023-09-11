@@ -1,11 +1,11 @@
+
 #ifndef _QCSP_PASSED_MISC_HPP_
 #define _QCSP_PASSED_MISC_HPP_ 1
 
 #define _USE_MATH_DEFINES
-#include <algorithm>
-#include <array>
 #include <cmath>
 #include <cstdint>
+#include <type_traits>
 
 namespace QCSP {
 namespace StandaloneDetector {
@@ -13,6 +13,18 @@ namespace StandaloneDetector {
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+template <class T>
+constexpr const T & arithmetic_max(const T & a, const T & b) {
+    static_assert(std::is_arithmetic<T>::value, "arithmetic_max function applies only tp arithmetic types.");
+    return (a < b) ? b : a;
+}
+
+template <class T>
+constexpr const T & arithmetic_min(const T & a, const T & b) {
+    static_assert(std::is_arithmetic<T>::value, "arithmetic_min function applies only tp arithmetic types.");
+    return (a < b) ? a : b;
+}
 
 constexpr double pi      = (double) M_PI;
 constexpr double two_pi  = 2. * pi;
@@ -75,7 +87,7 @@ template <>
 struct max_pow2<2> {
     template <typename T>
     static constexpr inline T max(T * a) {
-        return std::max(a[0], a[1]);
+        return arithmetic_max(a[0], a[1]);
     }
 };
 
@@ -86,7 +98,7 @@ struct max_pow2 {
         static_assert(is_pow2(Tsize), "Size must be a power of 2.");
         // const T head = max_pow2<Tsize / 2>(a);
         // const T tail = max_pow2<Tsize / 2>(a + Tsize / 2);
-        return std::max(max_pow2<Tsize / 2>::max(a), max_pow2<Tsize / 2>::max(a + Tsize / 2));
+        return arithmetic_max(max_pow2<Tsize / 2>::max(a), max_pow2<Tsize / 2>::max(a + Tsize / 2));
     }
 };
 
@@ -102,17 +114,17 @@ constexpr bool is_odd() {
 
 template <typename T, T saturation>
 constexpr T low_sat(T a) {
-    return std::max(a, saturation);
+    return arithmetic_max(a, saturation);
 }
 
 template <typename T>
 constexpr T low_sat_1(T a) {
-    return std::max(a, T(1));
+    return arithmetic_max(a, T(1));
 }
 
 template <typename T, T saturation>
 constexpr T high_sat(T a) {
-    return std::min(a, saturation);
+    return arithmetic_min(a, saturation);
 }
 
 constexpr float if_nan_0(float a) {

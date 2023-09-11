@@ -1,6 +1,7 @@
 #ifndef _QCSP_PASSED_DETECTOR_SERIAL_TEMPLATE_HPP_
 #define _QCSP_PASSED_DETECTOR_SERIAL_TEMPLATE_HPP_ 1
 
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -194,7 +195,7 @@ public:
 
 /**
  * @brief int16_t specialization of the CDetectorSerial
- * 
+ *
  * @tparam TFrameSize Number of symbol in a frame \(N\)
  * @tparam Tq Number of chip per symbol \(q\)
  * @tparam Tp_omega Number of frequency hypotheses \(p_\omega\)

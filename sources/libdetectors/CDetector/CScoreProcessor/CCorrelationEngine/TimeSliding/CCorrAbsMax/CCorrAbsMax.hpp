@@ -1,12 +1,14 @@
 #ifndef _QCSP_PASSED_CORR_ABS_MAX_HPP_
 #define _QCSP_PASSED_CORR_ABS_MAX_HPP_ 1
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 
 #include "Miscellanous/misc.hpp"
 
-#include <cstdio>
+//* DEBUG: If needed ->
+// #include <cstdio>
 
 namespace QCSP {
 namespace StandaloneDetector {

@@ -1,6 +1,7 @@
 #ifndef _QCSP_PASSED_DETECTOR_SERIAL_MULT_TEMPLATE_HPP_
 #define _QCSP_PASSED_DETECTOR_SERIAL_MULT_TEMPLATE_HPP_ 1
 
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 #include <vector>

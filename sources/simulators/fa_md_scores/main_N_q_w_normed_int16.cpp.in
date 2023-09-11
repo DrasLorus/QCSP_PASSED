@@ -87,7 +87,7 @@ int main(int argc, char * argv[]) {
         "ovmod-file", po::value<string>()->required(), "overmodulation sequence file to use")(
         "alist-file", po::value<string>()->required(), "alist file to use")(
         "threads,t", po::value<int>()->default_value(1), "number of threads to use")(
-        "threshold,H", po::value<float>()->default_value((cst_N * pow2_log2<cst_q*cst_q>()) / 2.f), "threshold to use in detection (no effect if complete is not specified)")(
+        "threshold,H", po::value<float>()->default_value((cst_N * pow2_log2<cst_q * cst_q>()) / 2.f), "threshold to use in detection (no effect if complete is not specified)")(
         "rotation-span", po::value<float>()->default_value(default_span), "rotation span to use. For a value X, rotation will be in the interval [-X/2, X/2]")(
         "step-numerator", po::value<unsigned>()->default_value(1U), "step numerator to use")(
         "step-denominator", po::value<unsigned>()->default_value(default_step), "step denominator to use")(
@@ -308,15 +308,15 @@ int main(int argc, char * argv[]) {
 
         size_t dims[2]             = {1UL, var_size};
         float  file_info[var_size] = {
-             (float) USE_MULT,
-             (float) normed,
-             (float) (complete ? threshold : -1.f),
-             (float) snr,
-             (float) q,
-             (float) q,
-             (float) actual_p_omega,
-             (float) detectors[0].rotation_step(),
-             (float) rotation_span};
+            (float) USE_MULT,
+            (float) normed,
+            (float) (complete ? threshold : -1.f),
+            (float) snr,
+            (float) q,
+            (float) q,
+            (float) actual_p_omega,
+            (float) detectors[0].rotation_step(),
+            (float) rotation_span};
         matvar_t * mat_file_info = Mat_VarCreate("file_info", MAT_C_SINGLE, MAT_T_SINGLE, 2, dims, file_info, 0);
 
         Mat_VarWrite(score_mat, mat_file_info, MAT_COMPRESSION_ZLIB);

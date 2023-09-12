@@ -15,7 +15,7 @@ private:
     CCorrAbsMaxGeneric     corr_abs_max;
 
 public:
-    const std::vector<float> & get_pn() const { return corr_abs_max.get_pn(); }
+    const std::vector<float> & get_pn() const;
 
     virtual float process(float re_in, float im_in);
 

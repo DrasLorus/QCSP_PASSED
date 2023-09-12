@@ -1,6 +1,9 @@
-cmake_minimum_required (VERSION 3.16.0 FATAL_ERROR)
+cmake_minimum_required (VERSION 3.17.0 FATAL_ERROR)
 if (CMAKE_VERSION VERSION_LESS 3.18.0)
-  message (WARNING "You are using an outdated version of cmake (typically used on Ubuntu 20.04). You may consider using an updated CMake.")
+  message (
+    WARNING
+      "You are using an outdated version of cmake (typically used on Ubuntu older than 22.04). You may consider using an updated CMake."
+  )
 endif ()
 
 # setting this is required
@@ -15,8 +18,6 @@ set (CMAKE_EXPORT_COMPILE_COMMANDS true)
 
 project (QCSP_PASSED LANGUAGES CXX VERSION 0.1)
 # this sets the project name
-
-include (cpack)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
   message (AUTHOR_WARNING "Windows detected, you may want to read the dedicated part of the README.md file.")
@@ -105,6 +106,16 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     /wd4267
   )
   add_compile_definitions (_CRT_SECURE_NO_WARNINGS=1)
+
+  if (AGRESSIVE_OPTIMISATION)
+    if (${CMAKE_HOST_SYSTEM_PROCESSOR} EQUAL "AMD64")
+      add_compile_options (/favor:AMD64)
+    else ()
+      add_compile_options (/favor:INTEL64)
+    endif ()
+  else ()
+    add_compile_options (/favor:blend)
+  endif ()
 
   set (FLAG_WERROR "/WX")
   set (LIB_MATH "")

@@ -81,6 +81,7 @@
 
 bin/
 lib/
+includes/
 build/
 
 *octave-workspace

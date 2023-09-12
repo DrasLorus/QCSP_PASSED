@@ -31,7 +31,7 @@ private:
     float (*conditional_norm)(float, float);
 
 public:
-    const std::vector<float> & get_pn() const { return corr_engine.get_pn(); }
+    const std::vector<float> & get_pn() const;
 
     virtual float process(float re_in, float im_in);
 

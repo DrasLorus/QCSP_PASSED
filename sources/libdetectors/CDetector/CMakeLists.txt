@@ -8,6 +8,51 @@ add_library (detectors_generic STATIC CDetectorSerialGeneric.cpp CDetectionState
 target_include_directories (detectors_generic PUBLIC ${LIB_ROOT_DIRECTORY})
 target_link_libraries (detectors_generic PUBLIC score_processor_generic)
 
+list (
+  APPEND
+  DETECTORS_GENERIC_HEADERS
+  ${CMAKE_CURRENT_SOURCE_DIR}/CDetectionStateGeneric.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/CDetectorSerialGeneric.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/CDetectorGenericInterface.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/CScoreProcessor/CCorrelationEngine/CCorrelationEngineGeneric.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/CScoreProcessor/CCorrelationEngine/TimeSliding/CCorrAbsMax/CCorrAbsMaxGeneric.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/CScoreProcessor/CCorrelationEngine/TimeSliding/CIterativeAdder/CIterativeAdderGeneric.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/CScoreProcessor/CNorm/CNormGeneric.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/CScoreProcessor/CScoreAccumulator/CScoreAccumulatorGeneric.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/CScoreProcessor/CScoreProcessorGeneric.hpp
+)
+
+list (
+  APPEND
+  DETECTORS_GENERIC_INCLUDE_HEADERS
+  ${CMAKE_SOURCE_DIR}/includes/CDetectionStateGeneric.hpp
+  ${CMAKE_SOURCE_DIR}/includes/CDetectorSerialGeneric.hpp
+  ${CMAKE_SOURCE_DIR}/includes/CDetectorGenericInterface.hpp
+  ${CMAKE_SOURCE_DIR}/includes/CCorrelationEngineGeneric.hpp
+  ${CMAKE_SOURCE_DIR}/includes/CCorrAbsMaxGeneric.hpp
+  ${CMAKE_SOURCE_DIR}/includes/CIterativeAdderGeneric.hpp
+  ${CMAKE_SOURCE_DIR}/includes/CNormGeneric.hpp
+  ${CMAKE_SOURCE_DIR}/includes/CScoreAccumulatorGeneric.hpp
+  ${CMAKE_SOURCE_DIR}/includes/CScoreProcessorGeneric.hpp
+)
+
+file (MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/includes)
+foreach (DG_HEADERS IN ZIP_LISTS DETECTORS_GENERIC_HEADERS DETECTORS_GENERIC_INCLUDE_HEADERS)
+  if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    find_program (POWERSHELL_PATH NAMES powershell REQUIRED)
+    add_custom_command (
+      OUTPUT ${DG_HEADERS_1} COMMAND ${POWERSHELL_PATH} -Command
+                                     "(cat ${DG_HEADERS_0})  -creplace '#include \"\\./.*/','#include \"' > ${DG_HEADERS_1}"
+    )
+  else ()
+    find_program (SED_PATH NAMES sed REQUIRED)
+    add_custom_command (
+      OUTPUT ${DG_HEADERS_1} COMMAND ${SED_PATH} "s/#include \"\\.\\/.*\\//#include \"/" ${DG_HEADERS_0} > ${DG_HEADERS_1}
+    ) # REVIEW
+  endif ()
+endforeach ()
+add_custom_target (detectors_generic_public_headers DEPENDS ${DETECTORS_GENERIC_INCLUDE_HEADERS})
+
 if (ENABLE_TESTING)
   include (CTest)
   include (Catch)

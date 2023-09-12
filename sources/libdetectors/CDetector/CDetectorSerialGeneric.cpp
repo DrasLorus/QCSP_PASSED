@@ -11,6 +11,21 @@
 #include "./CDetectorGenericInterface.hpp"
 #include "./CDetectorSerialGeneric.hpp"
 
+const std::vector<float> & QCSP::StandaloneDetector::CDetectorSerialGeneric::pn() const { return score_processors[0].get_pn(); }
+
+float QCSP::StandaloneDetector::CDetectorSerialGeneric::threshold() const noexcept { return _threshold; }
+float QCSP::StandaloneDetector::CDetectorSerialGeneric::symbol_rotation() const noexcept { return _symbol_rotation; }
+float QCSP::StandaloneDetector::CDetectorSerialGeneric::rotation_step() const noexcept { return _rotation_step; }
+
+const std::vector<float> & QCSP::StandaloneDetector::CDetectorSerialGeneric::primary_rotation() const noexcept { return rotation_vect; }
+
+float QCSP::StandaloneDetector::CDetectorSerialGeneric::frequency_error(unsigned n) const {
+    if (n >= p_omega) {
+        throw std::out_of_range("n must be below p_omega (= " + std::to_string(p_omega) + ")");
+    }
+    return frequency_errors[n];
+}
+
 void QCSP::StandaloneDetector::CDetectorSerialGeneric::update_state(const float * __restrict scores, state_t * __restrict state) const {
     const bool     frame_already_detected = state->frame_detected;
     const float    current_score          = state->max_score;

@@ -30,7 +30,7 @@ private:
     std::vector<float> abs_corr_registers; // [q];
 
 public:
-    const std::vector<float> & get_pn() const { return pn; }
+    const std::vector<float> & get_pn() const;
 
     virtual float process(float re_in, float im_in);
 

@@ -4,6 +4,8 @@
 
 #include "./CCorrAbsMaxGeneric.hpp"
 
+const std::vector<float> & QCSP::StandaloneDetector::CCorrAbsMaxGeneric::get_pn() const { return pn; }
+
 float QCSP::StandaloneDetector::CCorrAbsMaxGeneric::process(float re_in, float im_in) {
     for (unsigned u = 0; u < q; u++) {
         const float re_pn_u     = rotating_pn[u];

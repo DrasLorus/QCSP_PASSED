@@ -49,20 +49,14 @@ private:
     void update_state(const float * __restrict scores, state_t * __restrict state) const;
 
 public:
-    const std::vector<float> & pn() const { return score_processors[0].get_pn(); }
+    const std::vector<float> & pn() const;
 
-    float threshold() const noexcept { return _threshold; }
-    float symbol_rotation() const noexcept { return _symbol_rotation; }
-    float rotation_step() const noexcept { return _rotation_step; }
+    float threshold() const noexcept;
+    float symbol_rotation() const noexcept;
+    float rotation_step() const noexcept;
 
-    const std::vector<float> & primary_rotation() const noexcept { return rotation_vect; }
-
-    float frequency_error(unsigned n) const {
-        if (n >= p_omega) {
-            throw std::out_of_range("n must be below p_omega (= " + std::to_string(p_omega) + ")");
-        }
-        return frequency_errors[n];
-    }
+    const std::vector<float> & primary_rotation() const noexcept;
+    float                      frequency_error(unsigned n) const;
 
     virtual void process(float re_in, float im_in, state_t * state) override;
 

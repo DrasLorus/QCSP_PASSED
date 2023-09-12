@@ -4,6 +4,8 @@
 #include "./TimeSliding/CCorrAbsMax/CCorrAbsMaxGeneric.hpp"
 #include "./TimeSliding/CIterativeAdder/CIterativeAdderGeneric.hpp"
 
+const std::vector<float> & QCSP::StandaloneDetector::CCorrelationEngineGeneric::get_pn() const { return corr_abs_max.get_pn(); }
+
 float QCSP::StandaloneDetector::CCorrelationEngineGeneric::process(float re_in, float im_in) {
     float re_it, im_it;
     iterative_adder.process(re_in, im_in, &re_it, &im_it);

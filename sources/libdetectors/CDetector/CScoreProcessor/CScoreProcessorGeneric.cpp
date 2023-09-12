@@ -13,6 +13,8 @@ float identity(float x, float) { return x; }
 
 } // namespace
 
+const std::vector<float> & QCSP::StandaloneDetector::CScoreProcessorGeneric::get_pn() const { return corr_engine.get_pn(); }
+
 float QCSP::StandaloneDetector::CScoreProcessorGeneric::process(float re_in, float im_in) {
     const float norm_unsafe = norm_proc.process(re_in, im_in);
     const float norm_value  = norm_unsafe < float(1e-8)

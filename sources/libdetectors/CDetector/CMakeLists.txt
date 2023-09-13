@@ -38,7 +38,7 @@ list (
 
 file (MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/includes)
 foreach (DG_HEADERS IN ZIP_LISTS DETECTORS_GENERIC_HEADERS DETECTORS_GENERIC_INCLUDE_HEADERS)
-  if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
     find_program (POWERSHELL_PATH NAMES powershell REQUIRED)
     add_custom_command (
       OUTPUT ${DG_HEADERS_1} COMMAND ${POWERSHELL_PATH} -Command
@@ -47,7 +47,7 @@ foreach (DG_HEADERS IN ZIP_LISTS DETECTORS_GENERIC_HEADERS DETECTORS_GENERIC_INC
   else ()
     find_program (SED_PATH NAMES sed REQUIRED)
     add_custom_command (
-      OUTPUT ${DG_HEADERS_1} COMMAND ${SED_PATH} "s/#include \"\\.\\/.*\\//#include \"/" ${DG_HEADERS_0} > ${DG_HEADERS_1}
+      OUTPUT ${DG_HEADERS_1} COMMAND sh ${CMAKE_SOURCE_DIR}/scripts/path-remover.sh ${SED_PATH} ${DG_HEADERS_0} ${DG_HEADERS_1}
     ) # REVIEW
   endif ()
 endforeach ()

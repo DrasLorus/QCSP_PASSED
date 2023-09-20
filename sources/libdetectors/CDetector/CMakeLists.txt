@@ -41,14 +41,15 @@ foreach (DG_HEADERS IN ZIP_LISTS DETECTORS_GENERIC_HEADERS DETECTORS_GENERIC_INC
   if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
     find_program (POWERSHELL_PATH NAMES powershell REQUIRED)
     add_custom_command (
-      OUTPUT ${DG_HEADERS_1} COMMAND ${POWERSHELL_PATH} -Command
-                                     "(cat ${DG_HEADERS_0})  -creplace '#include \"\\./.*/','#include \"' > ${DG_HEADERS_1}"
+      OUTPUT ${DG_HEADERS_1} COMMAND ${POWERSHELL_PATH} -ExecutionPolicy Bypass -file ${CMAKE_SOURCE_DIR}/scripts/path-remover.ps1 -filein
+                                     ${DG_HEADERS_0} -fileout ${DG_HEADERS_1} DEPENDS ${CMAKE_SOURCE_DIR}/scripts/path-remover.ps1
     )
   else ()
     find_program (SED_PATH NAMES sed REQUIRED)
     add_custom_command (
       OUTPUT ${DG_HEADERS_1} COMMAND sh ${CMAKE_SOURCE_DIR}/scripts/path-remover.sh ${SED_PATH} ${DG_HEADERS_0} ${DG_HEADERS_1}
-    ) # REVIEW
+      DEPENDS ${CMAKE_SOURCE_DIR}/scripts/path-remover.sh
+    )
   endif ()
 endforeach ()
 add_custom_target (detectors_generic_public_headers ALL DEPENDS ${DETECTORS_GENERIC_INCLUDE_HEADERS})

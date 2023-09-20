@@ -51,7 +51,7 @@ foreach (DG_HEADERS IN ZIP_LISTS DETECTORS_GENERIC_HEADERS DETECTORS_GENERIC_INC
     ) # REVIEW
   endif ()
 endforeach ()
-add_custom_target (detectors_generic_public_headers DEPENDS ${DETECTORS_GENERIC_INCLUDE_HEADERS})
+add_custom_target (detectors_generic_public_headers ALL DEPENDS ${DETECTORS_GENERIC_INCLUDE_HEADERS})
 
 if (ENABLE_TESTING)
   include (CTest)

@@ -128,28 +128,27 @@ public:
             const int32_t re_d = re_in * pn_u; // Can be 17 + 1 sometimes
             const int32_t im_d = im_in * pn_u; // Can be 17 + 1 sometimes
 
-            const int32_t re_sat_d = (re_d <= -int32_t(1 << (17 - 1)) ? -int32_t(1 << (17 - 1)) + 1 : re_d); // It is thus saturated to 17 bits
-            const int32_t im_sat_d = (im_d <= -int32_t(1 << (17 - 1)) ? -int32_t(1 << (17 - 1)) + 1 : im_d); // It is thus saturated to 17 bits
+            constexpr uint step_W   = eta + 1;
+            const int32_t  re_sat_d = saturate<int32_t, step_W>(re_d); // It is thus saturated to 17 bits
+            const int32_t  im_sat_d = saturate<int32_t, step_W>(im_d); // It is thus saturated to 17 bits
 
-            const int32_t re_tmp_corr = re_corr_i_u + re_sat_d;
-            const int32_t im_tmp_corr = im_corr_i_u + im_sat_d;
+            constexpr uint corr_W      = this->p + step_W + 1;
+            const int32_t  re_tmp_corr = saturate<int32_t, corr_W>(re_corr_i_u + re_sat_d);
+            const int32_t  im_tmp_corr = saturate<int32_t, corr_W>(im_corr_i_u + im_sat_d);
 #endif
 
             re_corr_registers[u] = re_tmp_corr;
             im_corr_registers[u] = im_tmp_corr;
 
-            // abs_coor is on 2 * (17 + log2q) + 1 bits, meaning q could be up to 16384 before an overflow
+            // abs_coor is on 2 * (17 + log2q) + 1 bits, meaning q could be up to 16384 before an overflow while limited to 4096 in practice
             const uint64_t full_abs_corr = uint64_t(int64_t(re_tmp_corr) * int64_t(re_tmp_corr))
                                          + uint64_t(int64_t(im_tmp_corr) * int64_t(im_tmp_corr));
 
-            constexpr uint64_t saturation_th = (1LLU << (2 * eta + p + 2)) - 1LLU; // 40 bits for q = 64
+            constexpr uint abscorr_W = 2 * corr_W + 1 - (p + 1);
 
-            const bool saturate = full_abs_corr > saturation_th;
+            const uint64_t sat_abscorr = saturate<uint64_t, abscorr_W>(full_abs_corr);
 
-            const uint64_t sat_abs_corr = full_abs_corr * uint64_t(not saturate)
-                                        + saturation_th * uint64_t(saturate);
-
-            const uint32_t trunc_max = uint32_t(sat_abs_corr >> (eta + 1));
+            const uint32_t trunc_max = uint32_t(sat_abscorr >> (eta + 1));
 
             abs_corr_registers[u] = trunc_max;
 

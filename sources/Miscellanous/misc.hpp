@@ -3,6 +3,7 @@
 #define _QCSP_PASSED_MISC_HPP_ 1
 
 #define _USE_MATH_DEFINES
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <type_traits>
@@ -133,6 +134,24 @@ constexpr float if_nan_0(float a) {
 
 constexpr double if_nan_0(double a) {
     return (std::isnan(a) ? 0 : a);
+}
+
+template <class T, int64_t power>
+constexpr T constexpr_pow(T value) {
+    if constexpr (power > 0) {
+        return constexpr_pow<T, power - 1>(value) * value;
+    } else if constexpr (power < 0) {
+        return constexpr_pow<T, power + 1>(value) / value;
+    } else {
+        return T(1);
+    }
+}
+
+template <typename T, size_t bits>
+constexpr T saturate(T value) {
+    constexpr T max_V = +T((T(1) << (bits - T(std::is_signed<T>())))) - 1;
+    constexpr T min_V = (-T((T(1) << (bits - 1)))) * T(std::is_signed<T>());
+    return std::min(max_V, std::max(value, min_V));
 }
 
 } // namespace StandaloneDetector

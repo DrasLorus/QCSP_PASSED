@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include <type_traits>
 
 namespace QCSP {
 namespace StandaloneDetector {
@@ -23,7 +22,7 @@ constexpr const T & arithmetic_max(const T & a, const T & b) {
 
 template <class T>
 constexpr const T & arithmetic_min(const T & a, const T & b) {
-    static_assert(std::is_arithmetic<T>::value, "arithmetic_min function applies only tp arithmetic types.");
+    static_assert(std::is_arithmetic<T>::value, "arithmetic_min function applies only to arithmetic types.");
     return (a < b) ? a : b;
 }
 

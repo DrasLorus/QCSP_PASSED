@@ -53,6 +53,9 @@ cmake_dependent_option (
   OFF
 )
 
+set (CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+
+
 # ##########################################################################################################################################
 
 include (FetchContent)
@@ -142,7 +145,7 @@ else ()
 
   check_cxx_compiler_flag ("-mtune=native" MTUNE)
   if (MTUNE)
-    set (NATIVE_COMPILATION ${NATIVE_COMPILATION} -mtune=native)
+    set (NATIVE_COMPILATION -march=skylake -mtune=skylake --param=l1-cache-line-size=64 --param=l1-cache-size=32 --param=l2-cache-size=6144)
   endif ()
 endif ()
 

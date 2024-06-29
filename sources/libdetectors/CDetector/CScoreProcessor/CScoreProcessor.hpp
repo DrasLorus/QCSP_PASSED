@@ -129,13 +129,13 @@ public:
 
     uint32_t process_sqr(int16_t re_in, int16_t im_in) {
 
-        const uint16_t norm_value = std::max(norm_proc.process_sqr(re_in, im_in), uint16_t(1)); // This max is not useful in a real case scenario
+        const uint32_t norm_value = std::max(norm_proc.process_sqr(re_in, im_in), uint32_t(1)); // This max is not useful in a real case scenario
 
         const uint64_t cabs_max = corr_engine.process(re_in, im_in);
 
         const uint64_t normed_max = cabs_max / norm_value;
 
-        const uint32_t trunc_mno = normed_max >> (p - 1);
+        const uint32_t trunc_mno = uint32_t(saturate<uint64_t, 16 + p + 2>(normed_max));
 
         const uint32_t score = score_accumulator.process(trunc_mno);
 

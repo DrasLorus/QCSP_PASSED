@@ -1,3 +1,6 @@
 [submodule "windows/vcpkg"]
 	path = windows/vcpkg
 	url = https://github.com/microsoft/vcpkg.git
+[submodule "external/python/aptypes"]
+	path = external/python/aptypes
+	url = git@github.com:DrasLorus/aptypes-python.git

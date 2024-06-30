@@ -3,34 +3,62 @@ from correlation import TimeSlidingCorrelator, FftCorrelator
 import numpy as np
 
 class StepSubFP:
+    """perform the 'iterative accumulation'
+
+    """
     @property
     def q(self) -> np.uint16:
+        """gf cardinal
+
+        Returns:
+            np.uint16: value of q
+        """
         return self.__q
 
     @property
     def counter(self) -> np.uint16:
+        """internal counter
+
+        Returns:
+            np.uint16: the value
+        """
         return self.__counter
 
     @property
-    def bitW(self):
-        return self._inW
+    def bit_width(self) -> int:
+        """input quantization
+
+        Returns:
+            int: the value
+        """
+        return self._in_width
 
     @property
-    def bitI(self):
-        return self._inI
+    def bit_int(self):
+        """input quantization, int-part
+
+        Returns:
+            int: the value
+        """
+        return self._in_int
 
     @property
-    def bitQ(self):
-        return self._inQ
+    def bit_quote(self):
+        """input quantization, quote-part
+
+        Returns:
+            int: the value
+        """
+        return self._in_quote
 
     def __rotation(self, n:int) -> APComplex:
         rotation = np.exp(2j * self.__omega * (2 * n + 1) / (2 * self.q))
-        return APComplex(rotation, self._inW, 2)
+        return APComplex(rotation, self._in_width, 2)
 
-    def __init__(self, q: int, omega: float, bitW: int = 16, bitI: int = 4):
-        self._inW = bitW
-        self._inI = bitI
-        self._inQ = bitW - bitI
+    def __init__(self, q: int, omega: float, _bit_width: int = 16, _bit_int: int = 4):
+        self._in_width = _bit_width
+        self._in_int = _bit_int
+        self._in_quote = _bit_width - _bit_int
         self.__omega = omega
         self.__q = np.uint16(q)
         self.__counter = np.uint16(0)
@@ -41,58 +69,96 @@ class StepSubFP:
         self.__counter = np.bitwise_and(counter + 1, self.__q - 1)
         return counter
 
-    def process(self, value_in: APComplex) -> tuple:
+    def process(self, value_in: APComplex) -> APComplex:
+        """process value_in through the acumulative filter
+
+        Args:
+            value_in (APComplex): new value in the filter
+
+        Returns:
+            APComplex: the newest value minus the oldest one
+        """
         counter = self.__step_counter()
-        # new_value = (value_in * self.__rotation(counter)).truncate(self._inW - 2).truncate(3, False)
+        # new_value = (value_in * self.__rotation(counter)).truncate(self._in_width - 2).truncate(3, False)
         new_value = value_in
-        old_value = APComplex(self.__fifo[counter], self.bitW, self.bitI)
+        old_value = APComplex(self.__fifo[counter], self.bit_width, self.bit_int)
         self.__fifo[counter] = (new_value.real.raw, new_value.imag.raw)
         return new_value - old_value
 
 class TimeSlidingCorrelatorFP(StepSubFP):
-
+    """implement a fixed-point time-slidinhg correlator
+    """
     @property
-    def p(self):
+    def p(self) -> int:
+        """order of GF
+
+        Returns:
+            int: value of p
+        """
         return self.__p
     
     @property
-    def pn(self):
+    def pn(self) -> np.ndarray[int]:
+        """getter for PN
+
+        Returns:
+            np.ndarray[int]: a reference to PN
+        """
         return self.__pn
 
-    def __rotatePn(self):
+    def __rotate_pn(self):
         self.__pn = np.roll(self.__pn, -1)
 
-    def __init__(self, q: int, pn: np.ndarray, omega: float = 0, bitW: int = 16, bitI: int = 4):
-        super().__init__(q, omega, bitW, bitI)
+    def __init__(self, q: int, pn: np.ndarray[int], omega: float = 0, _bit_width: int = 16, _bit_int: int = 4):
+        super().__init__(q, omega, _bit_width, _bit_int)
         self.__p = int(np.log2(self.q))
         self.__pn = pn.copy()
-        self.__registers = tuple(APComplex(0, self.bitW + self.p + 1, self.bitI + self.p + 1)
+        self.__registers = tuple(APComplex(0, self.bit_width + self.p + 1, self.bit_int + self.p + 1)
                                  for _ in range(q))
 
-    def __permuteCorr(self, corr):
-        cnt    = self.counter
-        npCorr = np.array(corr, dtype=np.complex64)
-        return np.flip(np.roll(npCorr, np.int32(cnt - 1)))
+    def __permute_corr(self, corr: list[APComplex]) -> np.ndarray[np.complex64]:
+        """permute the correlation to match fft correlators and cast to np.complex64
 
-    def __pnCorrelate(self, value_in: APComplex):
-        new_values = [(value_in * APFixed(p, 2, 2)).truncate(1, False).saturate(1) for p in self.__pn] # FIXME Les problèmes
+        Args:
+            corr (APComplex): correlation to permute
+
+        Returns:
+            np.ndarray[np.complex64]: permuted np.complex64-converted correlation
+        """
+        cnt    = self.counter
+        np_corr = np.array(corr, dtype=np.complex64)
+        return np.flip(np.roll(np_corr, np.int32(cnt - 1)))
+
+    def __pn_correlate(self, value_in: APComplex) -> list[APComplex]:
+        """ts-correlate value in with PN
+
+        Args:
+            value_in (APComplex): input value
+
+        Returns:
+            list[APComplex]: the new correlation vector
+        """
+        new_values = [(value_in * APFixed(p, 2, 2)).truncate(1, False).saturate(1)
+            for p in self.__pn]
+        # FIXME Les problèmes
         old_corlts = self.__registers
-        new_corlts = [(x + y).saturate(1) for x,y in zip(new_values, old_corlts)] # FIXME Ajoute un Add stable
+        new_corlts = [(x + y).saturate(1) for x,y in zip(new_values, old_corlts)]
+        # FIXME Ajoute un Add stable
         self.__registers = new_corlts
-        self.__rotatePn()
+        self.__rotate_pn()
         return new_corlts
 
-    def process(self, value_in: APComplex):
-        return self.__pnCorrelate(super().process(value_in))
+    def process(self, value_in: APComplex) -> APComplex:
+        return self.__pn_correlate(super().process(value_in))
     
-    def processPermuted(self, value_in: APComplex):
-        return self.__permuteCorr(self.process(value_in))
+    def process_permuted(self, value_in: APComplex):
+        return self.__permute_corr(self.process(value_in))
     
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
 
     GFQ = 64
-    NBR = 100 * GFQ
+    NBR = 1000 * GFQ
     PN  = np.sign(np.random.randn(GFQ)).astype(np.float32)
     SNR = -10
 
@@ -116,13 +182,13 @@ if __name__ == '__main__':
     fA = np.array([fftCorr.process(z) for z in A])
 
     tsCorrFp = TimeSlidingCorrelatorFP(GFQ, PN, 0, IN_W, IN_I)
-    pA = np.array([tsCorrFp.processPermuted(APComplex(z, IN_W, IN_I)) for z in satA])
+    pA = np.array([tsCorrFp.process_permuted(APComplex(z, IN_W, IN_I)) for z in satA])
 
     tsCorr   = TimeSlidingCorrelator(GFQ, PN, 0)
-    tA = np.array([tsCorr.processPermuted(z) for z in A])
+    tA = np.array([tsCorr.process_permuted(z) for z in A])
 
     tsCorr   = TimeSlidingCorrelator(GFQ, PN, 0)
-    tpA = np.array([tsCorr.processPermuted(z) for z in satA])
+    tpA = np.array([tsCorr.process_permuted(z) for z in satA])
 
     plt.figure()
     plt.title(f'Real (top) and Imaginary (bottom) parts of the first point of correlations between {10*GFQ} and {16*GFQ}')

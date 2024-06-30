@@ -4,11 +4,24 @@ from norm_fp import NormFP, Norm
 
 import numpy as np
 
+def saturate(z: complex, max_value: float, min_value: float) -> complex:
+    """saturate real and imag part to min and max values
+
+    Args:
+        z (complex): the initial complex
+        max_value (float): maximum real value
+        min_value (float): minimum real value
+
+    Returns:
+        complex: saturated value
+    """
+    return min(max(z.real, min_value), max_value) + 1j*min(max(z.imag, min_value), max_value)
+
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
 
     GFQ  = int(256)
-    RUNS = 5
+    RUNS = 50
     NFRM = 1
     NBR  = RUNS * (NFRM + 2) * GFQ
     PN   = np.sign(np.random.randn(GFQ)).astype(np.float32)
@@ -19,74 +32,83 @@ if __name__ == '__main__':
 
     rng = np.random.default_rng(np.random.MT19937(np.random.SeedSequence(0)))
 
-    A = np.array((rng.normal(0., sigma_c, size=NBR) + 1j*rng.normal(0, sigma_c, size=NBR) 
-                  + np.tile(np.concatenate((np.zeros(GFQ * NFRM), np.tile(PN, NFRM), np.zeros(GFQ * NFRM))), RUNS)),
+    data = np.array((rng.normal(0., sigma_c, size=NBR) + 1j*rng.normal(0, sigma_c, size=NBR) 
+                  + np.tile(np.concatenate((np.zeros(GFQ * NFRM),
+                                            np.tile(PN, NFRM),
+                                            np.zeros(GFQ * NFRM))), RUNS)),
                 dtype=np.complex64) / 2
 
     IN_W = 8
     IN_I = 4
 
-    tmpM = APFixed(0, IN_W, IN_I).maxValue
-    tmpm = APFixed(0, IN_W, IN_I).minValue
-    satA = np.array([min(max(a.real, tmpm), tmpM) + 1j*min(max(a.imag, tmpm), tmpM) for a in A])
-    del tmpm, tmpM
+    max_temp       = APFixed(0, IN_W, IN_I).max_value
+    min_temp       = APFixed(0, IN_W, IN_I).min_value
+    saturated_data = np.array([saturate(a, max_temp, min_temp) for a in data])
+    del min_temp, max_temp
 
-    tsCorrFp = TSCorrAbsMaxFP(GFQ, PN, 0, IN_W, IN_I)
-    pA       = np.array([tsCorrFp.process(APComplex(z, IN_W, IN_I)) for z in satA])
-    outW = pA[0].bitW
-    outI = pA[0].bitI
+    ts_corr_fp  = TSCorrAbsMaxFP(GFQ, PN, 0, IN_W, IN_I)
+    xcam_fp_sat = np.array([ts_corr_fp.process(APComplex(z, IN_W, IN_I)) for z in saturated_data])
+    out_width   = xcam_fp_sat[0].bit_width
+    out_int     = xcam_fp_sat[0].bit_int
 
-    tsCorr = TSCorrAbsMax(GFQ, PN, 0)
-    tpA    = np.array([tsCorr.process(z) for z in satA])
+    ts_corr      = TSCorrAbsMax(GFQ, PN, 0)
+    xcam_flt_sat = np.array([ts_corr.process(z) for z in saturated_data])
 
-    normFp = NormFP(GFQ, IN_W, IN_I)
-    pB     = np.array([normFp.process(APComplex(z, IN_W, IN_I)) for z in satA])
+    norm_calc_fp = NormFP(GFQ, IN_W, IN_I)
+    norm_fp      = np.array([norm_calc_fp.process(APComplex(z, IN_W, IN_I)) for z in saturated_data])
 
-    norm = Norm(GFQ)
-    tpB  = np.array([norm.process(z) for z in satA])
+    norm_calc_flt = Norm(GFQ)
+    norm_flt      = np.array([norm_calc_flt.process(z) for z in saturated_data])
 
-    pBIF = np.fromiter(map(lambda x: APUfixed(x, outW, outI - pB[GFQ].bitI // 2), 1. / pB[GFQ:].astype(np.float32)), dtype=np.float32)
-    ivpB = np.fromiter(map(lambda x: APUfixed(x, outW, outI - pB[GFQ].bitI), APUfixed(1., outW + pB[0].bitW, outI).raw // pB[GFQ:].astype(int)), dtype=np.float32)
-    
-    tpAtpB = tpA[GFQ:] / tpB[GFQ:]
-    pAtpB  = pA[GFQ:] * (1. / tpB[GFQ:])
-    pApBIF  = pA[GFQ:] * pBIF
-    pAivpB  = pA[GFQ:] * ivpB
+    inv_norm_flt_fp = np.fromiter(
+        map(lambda x: APUfixed(x, out_width, out_int - norm_fp[GFQ].bit_int // 2),
+        1. / norm_fp[GFQ:].astype(np.float32)),
+        dtype=np.float32)
+    inv_norm_fp_fp = np.fromiter(
+        map(lambda x: APUfixed(x, out_width + 1, out_int - norm_fp[GFQ].bit_int + 1),
+        APUfixed(1., out_width + norm_fp[0].bit_width, out_int).raw // norm_fp[GFQ:].astype(int)),
+        dtype=np.float32)
 
-    pApB = np.fromiter(map(lambda x: APUfixed(x, outW, outI + pB[0].bitQ),
-                           (pA[GFQ:].astype(int)) // pB[GFQ:].astype(int)), # Equivalent to map .pad(pB[0].bitW) to pA[GFQ:]
-                           dtype=float)
+    xcam_flt_div_norm_flt   = xcam_flt_sat[GFQ:] * (1. / norm_flt[GFQ:])
+    xcam_fp_div_norm_flt    = xcam_fp_sat[GFQ:]  * (1. / norm_flt[GFQ:])
+    xcam_fp_inv_norm_flt_fp = xcam_fp_sat[GFQ:]  * inv_norm_flt_fp
+    xcam_fp_inv_norm_fp_fp  = xcam_fp_sat[GFQ:]  * inv_norm_fp_fp
+
+    # Equivalent to map .pad(norm_fp[0].bit_width) to xcam_fp_sat[GFQ:]
+    raw_xcamfp_div_norm_fp = np.fromiter(map(lambda x: APUfixed(x, out_width, out_int + norm_fp[0].bit_quote),
+        (xcam_fp_sat[GFQ:].astype(int)) // norm_fp[GFQ:].astype(int)),
+        dtype=float)
 
     plt.figure()
-    plt.title(f'Result')
-    plt.plot(tpAtpB, 'b-', label="tpAtpB")
-    plt.plot(pAtpB, 'g-', label="pAtpB")
-    plt.plot(pApBIF, 'r-', label="pApBIF")
-    plt.plot(pAivpB, 'y-', label="pAivpB")
-    plt.plot(pApB, 'c-', label="pApB")
+    plt.title('Result')
+    plt.plot(xcam_flt_div_norm_flt, 'b-', label="xcam_flt_div_norm_flt")
+    plt.plot(xcam_fp_div_norm_flt, 'g-', label="xcam_fp_div_norm_flt")
+    plt.plot(xcam_fp_inv_norm_flt_fp, 'r-', label="xcam_fp_inv_norm_flt_fp")
+    plt.plot(xcam_fp_inv_norm_fp_fp, 'y-', label="xcam_fp_inv_norm_fp_fp")
+    plt.plot(raw_xcamfp_div_norm_fp, 'c-', label="raw_xcamfp_div_norm_fp")
     plt.legend()
 
     plt.figure()
     plt.subplot(2,2,1)
-    plt.title(f'Correlation Float Sat')
-    plt.plot(tpA, 'b-', label="tpA")
+    plt.title('Correlation Float Sat')
+    plt.plot(xcam_flt_sat, 'b-', label="xcam_flt_sat")
     plt.subplot(2,2,2)
-    plt.title(f'Norm Float Sat')
-    plt.plot(tpB, 'g-', label="tpB")
+    plt.title('Norm Float Sat')
+    plt.plot(norm_flt, 'g-', label="norm_flt")
     plt.legend()
     plt.subplot(2,2,3)
-    plt.title(f'Correlation FP Sat')
-    plt.plot(pA, 'b-', label="pA")
+    plt.title('Correlation FP Sat')
+    plt.plot(xcam_fp_sat, 'b-', label="xcam_fp_sat")
     plt.subplot(2,2,4)
-    plt.title(f'Norm FP Sat')
-    plt.plot(pB, 'g-', label="pB")
+    plt.title('Norm FP Sat')
+    plt.plot(norm_fp, 'g-', label="norm_fp")
     plt.legend()
 
     plt.figure()
-    plt.plot(1 / tpB[GFQ:], 'b-', label="1 / tpB")
-    plt.plot(1 / pB[GFQ:].astype(np.float32), 'r-', label="1 / pB")
-    plt.plot(pBIF, 'g-', label="pBIF")
-    plt.plot(ivpB, 'y-', label="ivpB")
+    plt.plot(1 / norm_flt[GFQ:], 'b-', label="1 / norm_flt")
+    plt.plot(1 / norm_fp[GFQ:].astype(np.float32), 'r-', label="1 / norm_fp")
+    plt.plot(inv_norm_flt_fp, 'g-', label="inv_norm_flt_fp")
+    plt.plot(inv_norm_fp_fp, 'y-', label="inv_norm_fp_fp")
     plt.legend()
 
     plt.show()

@@ -59,7 +59,7 @@ class TimeSlidingCorrelator(StepSub):
     def process(self, value_in : np.complex64):
         return self.__pnCorrelate(super().process(value_in))
 
-    def processPermuted(self, value_in : np.complex64):
+    def process_permuted(self, value_in : np.complex64):
         return self.__permute(self.process(value_in))
 
 class FftCorrelator:

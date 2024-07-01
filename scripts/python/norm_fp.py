@@ -12,8 +12,8 @@ class Norm:
         self._fifo = np.concatenate((np.zeros(q -1 , dtype=np.float32), np.ones(1, dtype=np.float32)))
         self._register = np.float32(1)
 
-    def process(self, input : np.complex64):
-        new_value = np.real(input.conj() * input)
+    def process(self, value_in : np.complex64):
+        new_value = np.real(value_in.conj() * value_in)
         counter = self._counter
         old_value = self._fifo[counter]
         self._fifo[counter] = new_value
@@ -23,16 +23,16 @@ class Norm:
         return self._register
 
 class NormFP:
-    def __init__(self, q : int, bitW : int, bitI : int):
-        self._inW = bitW
-        self._inI = bitI
-        self._inQ = bitW - bitI
+    def __init__(self, q : int, bit_width : int, bit_int : int):
+        self._inW = bit_width
+        self._inI = bit_int
+        self._inQ = bit_width - bit_int
         self._q = q
         self._p = int(np.log2(q))
         self._counter = np.uint8(q - 1)
-        self._fifo_qtf = (2 * bitW + 1 - self._inQ, 2 * bitI + 1)
-        self._fifo = np.concatenate((np.zeros(q - 1), np.ones(1))) # bitW * 2 + 1, bitI * 2 + 1
-        self._reg_qtf = (2 * bitW + 2*(self._p + 1) - self._inQ, 2 * bitI + 2*(self._p + 1))
+        self._fifo_qtf = (2 * bit_width + 1 - self._inQ, 2 * bit_int + 1)
+        self._fifo = np.concatenate((np.zeros(q - 1), np.ones(1))) # bit_width * 2 + 1, bit_int * 2 + 1
+        self._reg_qtf = (2 * bit_width + 2*(self._p + 1) - self._inQ, 2 * bit_int + 2*(self._p + 1))
         self._register = APUfixed(1., *self._reg_qtf)
 
     def __step_counter(self):
@@ -48,8 +48,8 @@ class NormFP:
         self._register = ((old_norm + new_value) - old_value).truncate(1, lsb=False).saturate(1) # Stable
         return self._register
 
-    def process(self, input: APComplex):
-        new_value = input.magn().truncate(self._inQ)
+    def process(self, value_in: APComplex):
+        new_value = value_in.magn().truncate(self._inQ)
         return self.__step_register(new_value).truncate(self._p + 1)
 
 if __name__ == '__main__':

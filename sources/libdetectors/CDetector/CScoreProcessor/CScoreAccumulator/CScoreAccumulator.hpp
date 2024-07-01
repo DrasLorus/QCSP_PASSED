@@ -26,18 +26,18 @@ private:
 
 public:
     Tin_type process(Tin_type new_max) {
-        const uint32_t curr_counter  = counter;
-        const uint32_t score_counter = curr_counter & mask;
-        const Tin_type old_max       = fifos_max[curr_counter];
-        const Tin_type old_score     = score_registers[score_counter];
+        const uint32_t curr_counter  = this->counter;
+        const uint32_t score_counter = curr_counter & this->mask;
+        const Tin_type old_max       = this->fifos_max[curr_counter];
+        const Tin_type old_score     = this->score_registers[score_counter];
 
-        counter = (curr_counter + 1) * uint32_t(curr_counter != (N * q - 1)); // Faster !
+        this->counter = (curr_counter + 1) * uint32_t(curr_counter != (this->N * this->q - 1)); // Faster !
         // counter = (curr_counter + 1) % (N * q);
 
         const Tin_type new_score = old_score + new_max - old_max;
 
-        score_registers[score_counter] = new_score;
-        fifos_max[curr_counter]        = new_max;
+        this->score_registers[score_counter] = new_score;
+        this->fifos_max[curr_counter]        = new_max;
 
         return new_score;
     }

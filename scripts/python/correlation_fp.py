@@ -1,5 +1,9 @@
-from aptypes import APFixed,APComplex
-from correlation import TimeSlidingCorrelator, FftCorrelator
+from aptypes import APFixed, APComplex
+
+from utilities import saturate
+
+from correlation import TimeSlidingCorrelator
+
 import numpy as np
 
 class StepSubFP:
@@ -51,23 +55,32 @@ class StepSubFP:
         """
         return self._in_quote
 
-    def __rotation(self, n:int) -> APComplex:
-        rotation = np.exp(2j * self.__omega * (2 * n + 1) / (2 * self.q))
-        return APComplex(rotation, self._in_width, 2)
-
-    def __init__(self, q: int, omega: float, _bit_width: int = 16, _bit_int: int = 4):
-        self._in_width = _bit_width
-        self._in_int = _bit_int
-        self._in_quote = _bit_width - _bit_int
-        self.__omega = omega
-        self.__q = np.uint16(q)
+    def __init__(self, q: int, bit_width = 16, bit_int = 4):
+        self._in_width = bit_width
+        self._in_int   = bit_int
+        self._in_quote = bit_width - bit_int
+        self.__q       = np.uint16(q)
         self.__counter = np.uint16(0)
-        self.__fifo = np.zeros((q, 2), dtype=int)
+        self.__fifo    = np.zeros((q, 2), dtype=int)
 
     def __step_counter(self) -> np.uint16:
         counter = self.__counter
         self.__counter = np.bitwise_and(counter + 1, self.__q - 1)
         return counter
+
+    def __update_fifo(self, value_in: APComplex) -> APComplex:
+        """update the fifo with the new value and get the oldest one
+
+        Args:
+            value_in (APComplex): new value
+
+        Returns:
+            APComplex: oldest value in the fifo
+        """
+        counter              = self.__step_counter()
+        old_value            = self.__fifo[counter].copy()
+        self.__fifo[counter] = (value_in.real.raw, value_in.imag.raw)
+        return APComplex(old_value, self.bit_width, self.bit_int)
 
     def process(self, value_in: APComplex) -> APComplex:
         """process value_in through the acumulative filter
@@ -78,12 +91,8 @@ class StepSubFP:
         Returns:
             APComplex: the newest value minus the oldest one
         """
-        counter = self.__step_counter()
-        # new_value = (value_in * self.__rotation(counter)).truncate(self._in_width - 2).truncate(3, False)
-        new_value = value_in
-        old_value = APComplex(self.__fifo[counter], self.bit_width, self.bit_int)
-        self.__fifo[counter] = (new_value.real.raw, new_value.imag.raw)
-        return new_value - old_value
+        old_value = self.__update_fifo(value_in)
+        return value_in - old_value
 
 class TimeSlidingCorrelatorFP(StepSubFP):
     """implement a fixed-point time-slidinhg correlator
@@ -96,7 +105,7 @@ class TimeSlidingCorrelatorFP(StepSubFP):
             int: value of p
         """
         return self.__p
-    
+
     @property
     def pn(self) -> np.ndarray[int]:
         """getter for PN
@@ -109,12 +118,13 @@ class TimeSlidingCorrelatorFP(StepSubFP):
     def __rotate_pn(self):
         self.__pn = np.roll(self.__pn, -1)
 
-    def __init__(self, q: int, pn: np.ndarray[int], omega: float = 0, _bit_width: int = 16, _bit_int: int = 4):
-        super().__init__(q, omega, _bit_width, _bit_int)
+    def __init__(self, q: int, pn: np.ndarray[int], bit_width = 16, bit_int = 4):
+        super().__init__(q, bit_width, bit_int)
         self.__p = int(np.log2(self.q))
         self.__pn = pn.copy()
-        self.__registers = tuple(APComplex(0, self.bit_width + self.p + 1, self.bit_int + self.p + 1)
-                                 for _ in range(q))
+        self.__registers = tuple(
+            APComplex(0, self.bit_width + self.p + 1, self.bit_int + self.p + 1)
+            for _ in range(q))
 
     def __permute_corr(self, corr: list[APComplex]) -> np.ndarray[np.complex64]:
         """permute the correlation to match fft correlators and cast to np.complex64
@@ -140,25 +150,39 @@ class TimeSlidingCorrelatorFP(StepSubFP):
         """
         new_values = [(value_in * APFixed(p, 2, 2)).truncate(1, False).saturate(1)
             for p in self.__pn]
-        # FIXME Les problèmes
         old_corlts = self.__registers
         new_corlts = [(x + y).saturate(1) for x,y in zip(new_values, old_corlts)]
-        # FIXME Ajoute un Add stable
         self.__registers = new_corlts
         self.__rotate_pn()
         return new_corlts
 
-    def process(self, value_in: APComplex) -> APComplex:
+    def process(self, value_in: APComplex) -> list[APComplex]:
+        """process value in through the fixed-point TS-based correlator
+
+        Args:
+            value_in (APComplex): new value
+
+        Returns:
+            list[APComplex]: correlation vector
+        """
         return self.__pn_correlate(super().process(value_in))
-    
+
     def process_permuted(self, value_in: APComplex):
+        """retrieve the permuted correlation, matching FFT-based ones
+
+        Args:
+            value_in (APComplex): new value
+
+        Returns:
+            list[APComplex]: permuted correlation vector
+        """
         return self.__permute_corr(self.process(value_in))
-    
+
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
 
     GFQ = 64
-    NBR = 1000 * GFQ
+    NBR = 100 * GFQ
     PN  = np.sign(np.random.randn(GFQ)).astype(np.float32)
     SNR = -10
 
@@ -167,60 +191,78 @@ if __name__ == '__main__':
 
     rng = np.random.default_rng(np.random.MT19937(np.random.SeedSequence(0)))
 
-    A = np.array(rng.normal(0., sigma_c, size=NBR) + 1j*rng.normal(0, sigma_c, size=NBR) + np.tile(PN, NBR // GFQ),
+    data = np.array(np.sum(rng.normal(0., sigma_c, size=(NBR, 2)) * (1, 1j), axis=1)
+                 + np.tile(PN, NBR // GFQ),
                 dtype=np.complex64) / 2
 
     IN_W = 7
     IN_I = 3
 
-    tmpM = APFixed(0, IN_W, IN_I).max_value
-    tmpm = APFixed(0, IN_W, IN_I).min_value
-    satA = np.array([min(max(a.real, tmpm), tmpM) + 1j*min(max(a.imag, tmpm), tmpM) for a in A])
-    del tmpm, tmpM
+    tmp_max        = APFixed(0, IN_W, IN_I).max_value
+    tmp_min        = APFixed(0, IN_W, IN_I).min_value
+    saturated_data = np.array([saturate(z, tmp_max, tmp_min) for z in data])
+    del tmp_min, tmp_max
 
-    fftCorr  = FftCorrelator(GFQ, PN)
-    fA = np.array([fftCorr.process(z) for z in A])
+    # fft_corr_proc  = FftCorrelator(GFQ, PN)
+    # fft_corr       = np.array([fft_corr_proc.process(z) for z in data])
 
-    tsCorrFp = TimeSlidingCorrelatorFP(GFQ, PN, 0, IN_W, IN_I)
-    pA = np.array([tsCorrFp.process_permuted(APComplex(z, IN_W, IN_I)) for z in satA])
+    ts_corr_proc_fp = TimeSlidingCorrelatorFP(GFQ, PN, IN_W, IN_I)
+    ts_corr_fp      = np.array([ts_corr_proc_fp.process_permuted(APComplex(z, IN_W, IN_I))
+                                for z in saturated_data])
 
-    tsCorr   = TimeSlidingCorrelator(GFQ, PN, 0)
-    tA = np.array([tsCorr.process_permuted(z) for z in A])
+    ts_corr_proc_flt = TimeSlidingCorrelator(GFQ, PN)
+    ts_corr_flt      = np.array([ts_corr_proc_flt.process_permuted(z) for z in data])
 
-    tsCorr   = TimeSlidingCorrelator(GFQ, PN, 0)
-    tpA = np.array([tsCorr.process_permuted(z) for z in satA])
+    ts_corr_proc_flt = TimeSlidingCorrelator(GFQ, PN)
+    ts_corr_flt_sat  = np.array([ts_corr_proc_flt.process_permuted(z) for z in saturated_data])
 
     plt.figure()
-    plt.title(f'Real (top) and Imaginary (bottom) parts of the first point of correlations between {10*GFQ} and {16*GFQ}')
+    plt.title('Real (top) and Imaginary (bottom) parts of the first point of correlations between '
+              + f'{10*GFQ} and {16*GFQ}')
     plt.subplot(2, 1, 1)
-    plt.plot(np.real(tA[10*GFQ:16*GFQ, 0]), label="tA")
-    plt.plot(np.real(tpA[10*GFQ:16*GFQ, 0]), label="tpA")
-    plt.plot(np.real(pA[10*GFQ:16*GFQ, 0]), label="pA")
+    plt.plot(np.real(ts_corr_flt[10*GFQ:16*GFQ, 0]),
+        label = "ts_corr_flt")
+    plt.plot(np.real(ts_corr_flt_sat[10*GFQ:16*GFQ, 0]),
+        label = "ts_corr_flt_sat")
+    plt.plot(np.real(ts_corr_fp[10*GFQ:16*GFQ, 0]),
+        label = "ts_corr_fp")
     plt.subplot(2, 1, 2)
-    plt.plot(np.imag(tA[10*GFQ:16*GFQ, 0]), label="tA")
-    plt.plot(np.imag(tpA[10*GFQ:16*GFQ, 0]), label="tpA")
-    plt.plot(np.imag(pA[10*GFQ:16*GFQ, 0]), label="pA")
+    plt.plot(np.imag(ts_corr_flt[10*GFQ:16*GFQ, 0]),
+        label = "ts_corr_flt")
+    plt.plot(np.imag(ts_corr_flt_sat[10*GFQ:16*GFQ, 0]),
+        label = "ts_corr_flt_sat")
+    plt.plot(np.imag(ts_corr_fp[10*GFQ:16*GFQ, 0]),
+        label = "ts_corr_fp")
     plt.legend()
 
     plt.figure()
     plt.title(f'Absolute value of the {12*GFQ}th correlation')
-    plt.plot(np.abs(tA[12*GFQ, :]), label="tA")
-    plt.plot(np.abs(tpA[12*GFQ, :]), label="tpA")
-    plt.plot(np.abs(pA[12*GFQ, :]), label="pA")
+    plt.plot(np.abs(ts_corr_flt[12*GFQ, :]),
+        label = "ts_corr_flt", marker='*')
+    plt.plot(np.abs(ts_corr_flt_sat[12*GFQ, :]),
+        label = "ts_corr_flt_sat", marker='o')
+    plt.plot(np.abs(ts_corr_fp[12*GFQ, :]),
+        label = "ts_corr_fp", marker='x')
     plt.legend()
 
     plt.figure()
     plt.title('Absolute max of correlation')
-    plt.plot([np.max(np.abs(tA[i-GFQ:i])) for i in range(GFQ,NBR)], label="tA")
-    plt.plot([np.max(np.abs(tpA[i-GFQ:i])) for i in range(GFQ,NBR)], label="tpA")
-    plt.plot([np.max(np.abs(pA[i-GFQ:i])) for i in range(GFQ,NBR)], label="pA")
+    plt.plot([np.max(np.abs(ts_corr_flt[i-GFQ:i])) for i in range(GFQ,NBR)],
+        label = "ts_corr_flt")
+    plt.plot([np.max(np.abs(ts_corr_flt_sat[i-GFQ:i])) for i in range(GFQ,NBR)],
+        label = "ts_corr_flt_sat")
+    plt.plot([np.max(np.abs(ts_corr_fp[i-GFQ:i])) for i in range(GFQ,NBR)],
+        label = "ts_corr_fp")
     plt.legend()
 
     plt.figure()
     plt.title('Absolute max index of correlation')
-    plt.plot([np.argmax(np.abs(tA[i-GFQ:i])) for i in range(GFQ,NBR)],  label="tA")
-    plt.plot([np.argmax(np.abs(tpA[i-GFQ:i])) for i in range(GFQ,NBR)], label="tpA")
-    plt.plot([np.argmax(np.abs(pA[i-GFQ:i])) for i in range(GFQ,NBR)],  label="pA")
+    plt.plot([np.argmax(np.abs(ts_corr_flt[i-GFQ:i])) for i in range(GFQ,NBR)],
+        label = "ts_corr_flt")
+    plt.plot([np.argmax(np.abs(ts_corr_flt_sat[i-GFQ:i])) for i in range(GFQ,NBR)],
+        label = "ts_corr_flt_sat")
+    plt.plot([np.argmax(np.abs(ts_corr_fp[i-GFQ:i])) for i in range(GFQ,NBR)],
+        label = "ts_corr_fp")
     plt.legend()
 
     plt.show()

@@ -1,27 +1,19 @@
+"""exploration of fixed-point division methods
+"""
+
 from aptypes import APUfixed, APFixed, APComplex
+
+from utilities import saturate
 from corrabsmax_fp import TSCorrAbsMaxFP, TSCorrAbsMax
 from norm_fp import NormFP, Norm
 
 import numpy as np
 
-def saturate(z: complex, max_value: float, min_value: float) -> complex:
-    """saturate real and imag part to min and max values
-
-    Args:
-        z (complex): the initial complex
-        max_value (float): maximum real value
-        min_value (float): minimum real value
-
-    Returns:
-        complex: saturated value
-    """
-    return min(max(z.real, min_value), max_value) + 1j*min(max(z.imag, min_value), max_value)
-
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
 
     GFQ  = int(256)
-    RUNS = 50
+    RUNS = 50 // 50
     NFRM = 1
     NBR  = RUNS * (NFRM + 2) * GFQ
     PN   = np.sign(np.random.randn(GFQ)).astype(np.float32)
@@ -46,16 +38,17 @@ if __name__ == '__main__':
     saturated_data = np.array([saturate(a, max_temp, min_temp) for a in data])
     del min_temp, max_temp
 
-    ts_corr_fp  = TSCorrAbsMaxFP(GFQ, PN, 0, IN_W, IN_I)
+    ts_corr_fp  = TSCorrAbsMaxFP(GFQ, PN, IN_W, IN_I)
     xcam_fp_sat = np.array([ts_corr_fp.process(APComplex(z, IN_W, IN_I)) for z in saturated_data])
     out_width   = xcam_fp_sat[0].bit_width
     out_int     = xcam_fp_sat[0].bit_int
 
-    ts_corr      = TSCorrAbsMax(GFQ, PN, 0)
+    ts_corr      = TSCorrAbsMax(GFQ, PN)
     xcam_flt_sat = np.array([ts_corr.process(z) for z in saturated_data])
 
     norm_calc_fp = NormFP(GFQ, IN_W, IN_I)
-    norm_fp      = np.array([norm_calc_fp.process(APComplex(z, IN_W, IN_I)) for z in saturated_data])
+    norm_fp      = np.array([norm_calc_fp.process(APComplex(z, IN_W, IN_I))
+                             for z in saturated_data])
 
     norm_calc_flt = Norm(GFQ)
     norm_flt      = np.array([norm_calc_flt.process(z) for z in saturated_data])
@@ -75,7 +68,8 @@ if __name__ == '__main__':
     xcam_fp_inv_norm_fp_fp  = xcam_fp_sat[GFQ:]  * inv_norm_fp_fp
 
     # Equivalent to map .pad(norm_fp[0].bit_width) to xcam_fp_sat[GFQ:]
-    raw_xcamfp_div_norm_fp = np.fromiter(map(lambda x: APUfixed(x, out_width, out_int + norm_fp[0].bit_quote),
+    raw_xcamfp_div_norm_fp = np.fromiter(
+        map(lambda x: APUfixed(x, out_width, out_int + norm_fp[0].bit_quote),
         (xcam_fp_sat[GFQ:].astype(int)) // norm_fp[GFQ:].astype(int)),
         dtype=float)
 

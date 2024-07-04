@@ -1,4 +1,7 @@
+
+
 from aptypes import APFixed, APUfixed, APComplex
+from utilities import saturate, qfx
 import numpy as np
 
 class Norm:
@@ -6,11 +9,11 @@ class Norm:
     def q(self):
         return self.__q
 
-    def __init__(self, q : int):
+    def __init__(self, q : int, init_value: float = 2.):
         self.__q = q
         self._counter = np.uint8(0)
-        self._fifo = np.concatenate((np.zeros(q -1 , dtype=np.float32), np.ones(1, dtype=np.float32)))
-        self._register = np.float32(1)
+        self._fifo = np.ones(q, dtype=np.float32) * init_value
+        self._register = np.sum(self._fifo)
 
     def process(self, value_in : np.complex64):
         new_value = np.real(value_in.conj() * value_in)
@@ -23,17 +26,40 @@ class Norm:
         return self._register
 
 class NormFP:
-    def __init__(self, q : int, bit_width : int, bit_int : int):
-        self._inW = bit_width
-        self._inI = bit_int
-        self._inQ = bit_width - bit_int
+    @property
+    def in_width(self):
+        return self._in_width
+
+    @property
+    def in_int(self):
+        return self._in_int
+
+    @property
+    def in_quote(self):
+        return self._in_quote
+
+    @property
+    def q(self):
+        return self._q
+
+    @property
+    def p(self):
+        return self._p
+
+    @property
+    def fifo_qfx(self) -> qfx:
+        return self._fifo_qfx
+    
+    def __init__(self, q : int, bit_width : int, bit_int : int, init_value: float | int = 2.):
+        self._in_width = bit_width
+        self._in_int = bit_int
+        self._in_quote = bit_width - bit_int
         self._q = q
         self._p = int(np.log2(q))
         self._counter = np.uint8(q - 1)
-        self._fifo_qtf = (2 * bit_width + 1 - self._inQ, 2 * bit_int + 1)
-        self._fifo = np.concatenate((np.zeros(q - 1), np.ones(1))) # bit_width * 2 + 1, bit_int * 2 + 1
-        self._reg_qtf = (2 * bit_width + 2*(self._p + 1) - self._inQ, 2 * bit_int + 2*(self._p + 1))
-        self._register = APUfixed(1., *self._reg_qtf)
+        self._fifo_qfx = qfx(bit_width, 2 * bit_int)
+        self._fifo = np.array([APUfixed(init_value, *self.fifo_qfx) for _ in range(q)])
+        self._register = APUfixed(np.sum(self._fifo), *(self.fifo_qfx + self.p + 1))
 
     def __step_counter(self):
         counter = np.bitwise_and(self._counter + 1, self._q - 1, dtype=np.uint8)
@@ -42,61 +68,92 @@ class NormFP:
 
     def __step_register(self, new_value):
         counter = self.__step_counter()
-        old_value = APUfixed(self._fifo[counter], *self._fifo_qtf)
-        self._fifo[counter] = new_value.value
+        old_value = self._fifo[counter]
+        self._fifo[counter] = new_value
         old_norm = self._register
-        self._register = ((old_norm + new_value) - old_value).truncate(1, lsb=False).saturate(1) # Stable
+        # Stable
+        self._register = ((old_norm + new_value) - old_value).truncate(1, lsb=False).saturate(1)
         return self._register
 
     def process(self, value_in: APComplex):
-        new_value = value_in.magn().truncate(self._inQ)
-        return self.__step_register(new_value).truncate(self._p + 1)
+        full_magn = value_in.magn().truncate(self._in_width)
+        result = self.__step_register(full_magn).saturate(self.p + 1)
+        return result
 
 if __name__ == '__main__':
+    def runner(quantization, dat, gf, sigm):
+        tmp_max = APFixed(0, *quantization).max_value
+        tmp_min = APFixed(0, *quantization).min_value
+        saturated_data = np.array([saturate(z, tmp_max, tmp_min) for z in dat])
+        del tmp_min, tmp_max
+
+        norm   = Norm(gf, 1. / sigm**2)
+        normfp = NormFP(gf, *quantization, 1. / sigm**2)
+
+        NITP  = np.array([norm.process(z) for z in saturated_data])
+        NITFP = np.array([normfp.process(APComplex(z, *quantization)) for z in saturated_data])
+
+        print(f'[INFO] IN  >> {qfx(normfp.in_width, normfp.in_int)}')
+        print(f'[INFO] OUT >> {qfx(NITFP[0].bit_width, NITFP[0].bit_int)}')
+
+        return [NITP, NITFP]
+
+    from multiprocessing import Pool, cpu_count
+    pool = Pool(processes=cpu_count())
+
     from matplotlib import pyplot as plt
-
-    GFQ  = int(64)
-    RUNS = 2000
-    NFRM = 1
-    NBR  = RUNS * (NFRM + 2) * GFQ
-    PN   = np.sign(np.random.randn(GFQ)).astype(np.float32)
-
-    snr     = -10
-    sigma   = np.sqrt(10**(-snr / 10))
-    sigma_c = sigma / np.sqrt(2)
 
     rng = np.random.default_rng(np.random.MT19937(np.random.SeedSequence(0)))
 
-    A = np.array((rng.normal(0., sigma_c, size=NBR) + 1j*rng.normal(0, sigma_c, size=NBR) 
-                  + np.tile(np.concatenate((np.zeros(64), np.tile(PN, NFRM), np.zeros(64))), RUNS)),
-                dtype=np.complex64) / 2
+    GFQ    = 64
+    RUNS   = 100
+    NFRAME = 10
+    NSYMBS = RUNS * (NFRAME + (NFRAME // 2) * 2)
+    NCHIPS = NSYMBS * GFQ
+    PN     = np.sign(rng.normal(size=GFQ)).astype(np.float32)
+    SNR    = -10.
 
-    # PA = np.concatenate((np.zeros(GFQ - 1), A))
-    # N  = np.array([np.sum(np.real(PA[i : i + GFQ].conj() * PA[i : i + GFQ]))
-    #             for i,_ in enumerate(PA[:-GFQ+1])])
+    text = [
+        'The current simulation assumes three hypotheses:',
+        '  1. The channel "power" is broadly known, i.e, it is possible to define',
+        '     a value `IN_I` such that:',
+        '         $\\forall x \\in X, -2^(IN_I - 1) \\leq x \\leq 2^(IN_I - 1)$',
+        '  2. The signal is not omnipresent, i.e., the inputs are not stuck to 2^(IN_I - 1)',
+        '  3. The channel is gaussian-ish, such that a value $\\sigma$ can be estimated',
+        '     to compute the *mean value* of the noise.'
+    ]
+    print('\n'.join(text))
 
-    norm = Norm(GFQ)
-    NIT  = np.array([norm.process(x) for x in A])
+    SIGMA     = np.sqrt(10**(-SNR / 10))
+    SIGMA_CPX = float(SIGMA / np.sqrt(2))
 
-    IN_W = 8
+    DUMMY_FRAME = np.concatenate((np.zeros(GFQ * NFRAME // 2),
+                                  np.tile(PN, NFRAME),
+                                  np.zeros(GFQ * NFRAME // 2)))
+
+
+    data = np.array(np.sum(rng.normal(0., SIGMA_CPX, size=(NCHIPS, 2)) * (1, 1j), axis=1)
+                    + np.tile(DUMMY_FRAME, RUNS),
+                dtype=np.complex64)
     IN_I = 4
+    data_normalized = data * 2**(IN_I - 2) / max(np.max(np.abs(data.real)),
+                                                 np.max(np.abs(data.imag)))
+    # Equivalent to channel normalization
 
-    tmpM = APFixed(0, IN_W, IN_I).max_value
-    tmpm = APFixed(0, IN_W, IN_I).min_value
-    SatA = np.array([min(max(z.real, tmpm), tmpM) + 1j*min(max(z.imag, tmpm), tmpM) for z in A])
-    del tmpm, tmpM
+    norm_proc_flt = Norm(GFQ, 1. / SIGMA**2)
+    norm_flt      = np.array([norm_proc_flt.process(x) for x in data_normalized])
 
-    norm   = Norm(GFQ)
-    normfp = NormFP(GFQ, IN_W, IN_I)
+    result = []
+    for IN_W in range(6, 16):
+        result.append(pool.apply_async(runner, [qfx(IN_W, 4), data_normalized, GFQ, SIGMA]))
+    for v in result:
+        norm_flt_sat, norm_fp = v.get()
 
-    NITP  = np.array([norm.process(z) for z in SatA])
-    NITFP = np.array([normfp.process(APComplex(z, IN_W, IN_I)) for z in SatA])
-
-    plt.figure()
-    plt.plot(NIT, 'k:', label="Float")
-    plt.plot(NITP, 'b-x', label="Float Sat.")
-    plt.plot(NITFP, 'g-x', label="FP Sat.")
-    plt.legend()
+        plt.figure()
+        plt.plot(norm_flt  - np.mean(norm_flt), 'k:', label="Float")
+        plt.plot(norm_flt_sat - np.mean(norm_flt_sat), 'b-x', label="Float Sat.")
+        plt.plot(norm_fp.astype(float) - np.mean(norm_fp.astype(float)), 'g-x', label="FP Sat.")
+        plt.legend()
     plt.show()
 
     print(__file__ + ': ok')

@@ -77,8 +77,8 @@ class NormFP:
 
     def process(self, value_in: APComplex):
         full_magn = value_in.magn().truncate(self._in_width)
-        result = self.__step_register(full_magn).saturate(self.p + 1)
-        return result
+        local_result = self.__step_register(full_magn).saturate(self.p + 1)
+        return local_result
 
 if __name__ == '__main__':
     def runner(quantization, dat, gf, sigm):
@@ -135,21 +135,23 @@ if __name__ == '__main__':
     data = np.array(np.sum(rng.normal(0., SIGMA_CPX, size=(NCHIPS, 2)) * (1, 1j), axis=1)
                     + np.tile(DUMMY_FRAME, RUNS),
                 dtype=np.complex64)
-    IN_I = 4
-    data_normalized = data * 2**(IN_I - 2) / max(np.max(np.abs(data.real)),
-                                                 np.max(np.abs(data.imag)))
+    IN_I = 6
+    # data_normalized = data * 2**(IN_I - 2) / max(np.max(np.abs(data.real)),
+    #                                              np.max(np.abs(data.imag)))
     # Equivalent to channel normalization
+    data_normalized = data
 
     norm_proc_flt = Norm(GFQ, 1. / SIGMA**2)
     norm_flt      = np.array([norm_proc_flt.process(x) for x in data_normalized])
 
     result = []
-    for IN_W in range(6, 16):
-        result.append(pool.apply_async(runner, [qfx(IN_W, 4), data_normalized, GFQ, SIGMA]))
-    for v in result:
+    for IN_W in range(6, 16+1):
+        result.append(pool.apply_async(runner, [qfx(IN_W, IN_I), data_normalized, GFQ, SIGMA]))
+    for i,v in enumerate(result):
         norm_flt_sat, norm_fp = v.get()
 
         plt.figure()
+        plt.title(f'IN_W = {i + 6}')
         plt.plot(norm_flt  - np.mean(norm_flt), 'k:', label="Float")
         plt.plot(norm_flt_sat - np.mean(norm_flt_sat), 'b-x', label="Float Sat.")
         plt.plot(norm_fp.astype(float) - np.mean(norm_fp.astype(float)), 'g-x', label="FP Sat.")

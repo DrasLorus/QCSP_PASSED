@@ -1,4 +1,5 @@
 #include "CNorm.hpp"
+#include "CNormFP.hpp"
 
 namespace {
 class phantom : public QCSP::StandaloneDetector::CNorm<64, float> {};

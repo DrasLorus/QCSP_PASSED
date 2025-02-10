@@ -153,6 +153,11 @@ constexpr T saturate(T value) {
     return std::min(max_V, std::max(value, min_V));
 }
 
+template <typename T>
+constexpr T abs(T value) {
+    return value < 0 ? -value : value;
+}
+
 } // namespace StandaloneDetector
 } // namespace QCSP
 

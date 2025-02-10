@@ -1,3 +1,5 @@
+#ifndef _QCSP_METATYPES_HPP_
+#define _QCSP_METATYPES_HPP_ 1
 
 #include <cstdint>
 #include <type_traits>
@@ -96,53 +98,106 @@ struct sintxx_gen {};
 template <>
 struct sintxx_gen<u8> {
     using type = uint8_t;
+    template <class T>
+    constexpr type operator()(T v) {
+        return type(v);
+    }
 };
 
 template <>
 struct sintxx_gen<u16> {
     using type = uint16_t;
+    template <class T>
+    constexpr type operator()(T v) {
+        return type(v);
+    }
 };
 
 template <>
 struct sintxx_gen<u32> {
     using type = uint32_t;
+    template <class T>
+    constexpr type operator()(T v) {
+        return type(v);
+    }
 };
 
 template <>
 struct sintxx_gen<u64> {
     using type = uint64_t;
+    template <class T>
+    constexpr type operator()(T v) {
+        return type(v);
+    }
 };
 
 template <>
 struct sintxx_gen<i8> {
     using type = int8_t;
+    template <class T>
+    constexpr type operator()(T v) {
+        return type(v);
+    }
 };
 
 template <>
 struct sintxx_gen<i16> {
     using type = int16_t;
+    template <class T>
+    constexpr type operator()(T v) {
+        return type(v);
+    }
 };
 
 template <>
 struct sintxx_gen<i32> {
     using type = int32_t;
+    template <class T>
+    constexpr type operator()(T v) {
+        return type(v);
+    }
 };
 
 template <>
 struct sintxx_gen<i64> {
     using type = int64_t;
+    template <class T>
+    constexpr type operator()(T v) {
+        return type(v);
+    }
 };
 
 } // namespace metatypes
 
-template <uint64_t Tvalue, enum metatypes::deduction_method method = metatypes::FROM_MAX>
-using uintxx_t = typename metatypes::sintxx_gen<metatypes::deduce_size<Tvalue, metatypes::UNSIGNED, method>()>::type;
-
-template <uint64_t Tvalue, enum metatypes::deduction_method method = metatypes::FROM_MAX>
-using intxx_t = typename metatypes::sintxx_gen<metatypes::deduce_size<Tvalue, metatypes::SIGNED, method>()>::type;
-
 template <uint64_t Tvalue, metatypes::signedness Tsigned, enum metatypes::deduction_method method = metatypes::FROM_MAX>
 using aintxx_t = typename metatypes::sintxx_gen<metatypes::deduce_size<Tvalue, Tsigned, method>()>::type;
+
+template <uint64_t Tvalue, enum metatypes::deduction_method method = metatypes::FROM_MAX>
+using uintxx_t = aintxx_t<Tvalue, metatypes::UNSIGNED, method>;
+
+template <uint64_t Tvalue, enum metatypes::deduction_method method = metatypes::FROM_MAX>
+using intxx_t = aintxx_t<Tvalue, metatypes::SIGNED, method>;
+
+template <uint64_t Tvalue, metatypes::signedness Tsigned, enum metatypes::deduction_method method = metatypes::FROM_MAX>
+constexpr aintxx_t<Tvalue, Tsigned, method> make_aintxx_t(aintxx_t<Tvalue, Tsigned, method> value = aintxx_t<Tvalue, Tsigned, method>(Tvalue)) {
+    return aintxx_t<Tvalue, Tsigned, method>(value);
+}
+
+template <uint64_t Tvalue, enum metatypes::deduction_method method = metatypes::FROM_MAX>
+constexpr uintxx_t<Tvalue, method> make_uintxx_t(uintxx_t<Tvalue, method> value = uintxx_t<Tvalue, method>(Tvalue)) {
+    return make_aintxx_t<Tvalue, metatypes::UNSIGNED, method>(value);
+}
+
+template <uint64_t Tvalue, enum metatypes::deduction_method method = metatypes::FROM_MAX>
+constexpr intxx_t<Tvalue, method> make_intxx_t(intxx_t<Tvalue, method> value = intxx_t<Tvalue, method>(Tvalue)) {
+    return make_aintxx_t<Tvalue, metatypes::SIGNED, method>(value);
+}
+
+// template <uint64_t Tvalue, enum metatypes::deduction_method method = metatypes::FROM_MAX>
+// using intxx_t = typename metatypes::sintxx_gen<metatypes::deduce_size<Tvalue, metatypes::SIGNED, method>()>::type;
+
+// template <uint64_t Tvalue, metatypes::signedness Tsigned, enum metatypes::deduction_method method = metatypes::FROM_MAX>
+// using aintxx_t = typename metatypes::sintxx_gen<metatypes::deduce_size<Tvalue, Tsigned, method>()>::type;
 
 template <uint64_t in_bits, uint64_t truncated_bits, metatypes::signedness Tsigned = metatypes::UNSIGNED, bool lsb = true>
 struct truncation {
@@ -167,8 +222,8 @@ struct saturation {
     using in_t                         = aintxx_t<in_bits, Tsigned, metatypes::FROM_BITS>;
     using out_t                        = aintxx_t<out_bits, Tsigned, metatypes::FROM_BITS>;
 
-    static constexpr out_t max_raw_value = (1ULL << (out_bits - uint64_t(Tsigned))) - 1;
-    static constexpr out_t min_raw_value = -(1ULL << (out_bits - uint64_t(Tsigned))) * uint64_t(Tsigned);
+    static constexpr out_t max_raw_value = out_t((1ULL << (out_bits - uint64_t(Tsigned))) - 1);
+    static constexpr out_t min_raw_value = out_t(-(1ULL << (out_bits - uint64_t(Tsigned)))) * out_t(Tsigned);
 
     static constexpr out_t apply(in_t value) {
         if constexpr (Tsigned == metatypes::UNSIGNED) {
@@ -185,4 +240,7 @@ struct saturation {
     }
 };
 
+
 } // namespace QCSP
+
+#endif // _QCSP_METATYPES_HPP_

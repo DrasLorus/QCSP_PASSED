@@ -16,7 +16,7 @@ list (
   ${CMAKE_CURRENT_SOURCE_DIR}/CDetectorGenericInterface.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/CScoreProcessor/CCorrelationEngine/CCorrelationEngineGeneric.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/CScoreProcessor/CCorrelationEngine/TimeSliding/CCorrAbsMax/CCorrAbsMaxGeneric.hpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/CScoreProcessor/CCorrelationEngine/TimeSliding/CIterativeAdder/CIterativeAdderGeneric.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/CScoreProcessor/CCorrelationEngine/TimeSliding/CQSpannedSequentialAdder/CQSpannedSequentialAdderRC.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/CScoreProcessor/CNorm/CNormGeneric.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/CScoreProcessor/CScoreAccumulator/CScoreAccumulatorGeneric.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/CScoreProcessor/CScoreProcessorGeneric.hpp
@@ -30,7 +30,7 @@ list (
   ${CMAKE_SOURCE_DIR}/includes/CDetectorGenericInterface.hpp
   ${CMAKE_SOURCE_DIR}/includes/CCorrelationEngineGeneric.hpp
   ${CMAKE_SOURCE_DIR}/includes/CCorrAbsMaxGeneric.hpp
-  ${CMAKE_SOURCE_DIR}/includes/CIterativeAdderGeneric.hpp
+  ${CMAKE_SOURCE_DIR}/includes/CQSpannedSequentialAdderRC.hpp
   ${CMAKE_SOURCE_DIR}/includes/CNormGeneric.hpp
   ${CMAKE_SOURCE_DIR}/includes/CScoreAccumulatorGeneric.hpp
   ${CMAKE_SOURCE_DIR}/includes/CScoreProcessorGeneric.hpp

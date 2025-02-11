@@ -9,7 +9,7 @@ list (
   ${CMAKE_CURRENT_SOURCE_DIR}/CDetector/CDetectorSerialGeneric.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/CDetector/CScoreProcessor/CCorrelationEngine/CCorrelationEngineGeneric.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/CDetector/CScoreProcessor/CCorrelationEngine/TimeSliding/CCorrAbsMax/CCorrAbsMaxGeneric.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/CDetector/CScoreProcessor/CCorrelationEngine/TimeSliding/CIterativeAdder/CIterativeAdderGeneric.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/CDetector/CScoreProcessor/CCorrelationEngine/TimeSliding/CQSpannedSequentialAdder/CQSpannedSequentialAdderRC.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/CDetector/CScoreProcessor/CNorm/CNormGeneric.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/CDetector/CScoreProcessor/CScoreAccumulator/CScoreAccumulatorGeneric.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/CDetector/CScoreProcessor/CScoreProcessorGeneric.cpp

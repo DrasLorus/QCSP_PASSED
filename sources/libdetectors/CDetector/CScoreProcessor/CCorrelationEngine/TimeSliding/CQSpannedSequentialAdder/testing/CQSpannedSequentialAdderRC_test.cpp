@@ -1,4 +1,4 @@
-#include "../CIterativeAdder.hpp"
+#include "../CQSpannedSequentialAdderRC.hpp"
 
 #include <algorithm>
 #include <catch2/catch.hpp>
@@ -8,16 +8,9 @@
 using namespace QCSP::StandaloneDetector;
 using std::vector;
 
-TEST_CASE("CIterativeAdder int16_t works for high snr inputs (q: 64, w:16, i:2)", "[iterativeadder][high][fixed]") {
+TEST_CASE("CQSpannedSequentialAdderRC works for high snr inputs (q: 64)", "[qspannedsequentialadder][generic][high]") {
 
-    constexpr unsigned q     = 64;
-    constexpr unsigned In_W  = 16;
-    constexpr unsigned In_I  = 2;
-    constexpr unsigned Out_W = In_W + 1;
-    constexpr unsigned Out_I = In_I + 1;
-
-    constexpr float in_scale_factor = float(1 << (In_W - In_I));
-    constexpr float ot_scale_factor = 1.f / float(1 << (Out_W - Out_I));
+    constexpr unsigned q = 64;
 
     mat_t * data_file = Mat_Open("../data/test_data_w1_nofreq.mat", MAT_ACC_RDONLY);
     if (not bool(data_file)) {
@@ -49,41 +42,28 @@ TEST_CASE("CIterativeAdder int16_t works for high snr inputs (q: 64, w:16, i:2)"
     Mat_VarFree(tmp_mat);
     Mat_Close(data_file);
 
-    CIterativeAdder<q, int16_t> * proc = new CIterativeAdder<q, int16_t>();
+    CQSpannedSequentialAdderRC * proc = new CQSpannedSequentialAdderRC(q);
 
     vector<float> re_results(re_out.size(), 0.f);
     vector<float> im_results(im_out.size(), 0.f);
 
+    float * p_re_out = re_results.data();
+    float * p_im_out = im_results.data();
     for (int64_t i = 0; i < int64_t(re_results.size()); i++) {
-        const int16_t fx_re_in = int16_t(re_in[i] * in_scale_factor);
-        const int16_t fx_im_in = int16_t(im_in[i] * in_scale_factor);
-
-        int32_t fx_re_out, fx_im_out;
-
-        proc->process(fx_re_in, fx_im_in, &fx_re_out, &fx_im_out);
-
-        re_results[i] = float(fx_re_out) * ot_scale_factor;
-        im_results[i] = float(fx_im_out) * ot_scale_factor;
+        proc->process(re_in[i], im_in[i], p_re_out++, p_im_out++);
     }
 
     for (int64_t i = 0; i < int64_t(re_results.size()); i++) {
-        REQUIRE_THAT(re_results[i], Catch::Matchers::WithinRel(re_out[i], 1e-4f));
-        REQUIRE_THAT(im_results[i], Catch::Matchers::WithinRel(im_out[i], 1e-4f));
+        REQUIRE_THAT(re_results[i], Catch::Matchers::WithinRel(re_out[i], 1e-9f));
+        REQUIRE_THAT(im_results[i], Catch::Matchers::WithinRel(im_out[i], 1e-9f));
     }
 
     delete proc;
 }
 
-TEST_CASE("CIterativeAdder int16_t works for low snr inputs (q: 64, w: 16, i:5)", "[iterativeadder][low][fixed]") {
+TEST_CASE("CQSpannedSequentialAdderRC works for low snr inputs (q: 64)", "[qspannedsequentialaddergeneric][low][q64]") {
 
-    constexpr unsigned q     = 64;
-    constexpr unsigned In_W  = 16;
-    constexpr unsigned In_I  = 5;
-    constexpr unsigned Out_W = In_W + 1;
-    constexpr unsigned Out_I = In_I + 1;
-
-    constexpr float in_scale_factor = float(1 << (In_W - In_I));
-    constexpr float ot_scale_factor = 1.f / float(1 << (Out_W - Out_I));
+    constexpr unsigned q = 64;
 
     mat_t * data_file = Mat_Open("../data/test_data_w1_nofreq.mat", MAT_ACC_RDONLY);
     if (not bool(data_file)) {
@@ -115,27 +95,18 @@ TEST_CASE("CIterativeAdder int16_t works for low snr inputs (q: 64, w: 16, i:5)"
     Mat_VarFree(tmp_mat);
     Mat_Close(data_file);
 
-    CIterativeAdder<q, int16_t> * proc = new CIterativeAdder<q, int16_t>();
+    CQSpannedSequentialAdderRC * proc = new CQSpannedSequentialAdderRC(q);
 
     vector<float> re_results(re_out.size(), 0.f);
     vector<float> im_results(im_out.size(), 0.f);
 
-    constexpr float margin = 12 * 1e-4; // -12 < Data input < 12
-
+    float * p_re_out = re_results.data();
+    float * p_im_out = im_results.data();
     for (int64_t i = 0; i < int64_t(re_results.size()); i++) {
-        const int16_t fx_re_in = int16_t(re_in[i] * in_scale_factor);
-        const int16_t fx_im_in = int16_t(im_in[i] * in_scale_factor);
-
-        int32_t fx_re_out, fx_im_out;
-
-        REQUIRE_THAT(float(fx_re_in), Catch::Matchers::WithinAbs(re_in[i] * in_scale_factor, margin * in_scale_factor));
-        REQUIRE_THAT(float(fx_im_in), Catch::Matchers::WithinAbs(im_in[i] * in_scale_factor, margin * in_scale_factor));
-
-        proc->process(fx_re_in, fx_im_in, &fx_re_out, &fx_im_out);
-
-        re_results[i] = float(fx_re_out) * ot_scale_factor;
-        im_results[i] = float(fx_im_out) * ot_scale_factor;
+        proc->process(re_in[i], im_in[i], p_re_out++, p_im_out++);
     }
+
+    constexpr float margin = 12e-6; // -12 < Data input < 12
 
     for (int64_t i = 0; i < int64_t(re_results.size()); i++) {
         REQUIRE_THAT(re_results[i], Catch::Matchers::WithinAbs(re_out[i], margin));

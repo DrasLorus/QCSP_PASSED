@@ -4,14 +4,14 @@
 #include <vector>
 
 #include "./TimeSliding/CCorrAbsMax/CCorrAbsMaxGeneric.hpp"
-#include "./TimeSliding/CIterativeAdder/CIterativeAdderGeneric.hpp"
+#include "./TimeSliding/CQSpannedSequentialAdder/CQSpannedSequentialAdderRC.hpp"
 
 namespace QCSP {
 namespace StandaloneDetector {
 
 class CCorrelationEngineGeneric {
 private:
-    CIterativeAdderGeneric iterative_adder;
+    CQSpannedSequentialAdderRC iterative_adder;
     CCorrAbsMaxGeneric     corr_abs_max;
 
 public:

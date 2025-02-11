@@ -2,9 +2,9 @@
 #include <stdexcept>
 #include <vector>
 
-#include "./CIterativeAdderGeneric.hpp"
+#include "./CQSpannedSequentialAdderRC.hpp"
 
-void QCSP::StandaloneDetector::CIterativeAdderGeneric::process(float re_in, float im_in, float * re_out, float * im_out) {
+void QCSP::StandaloneDetector::CQSpannedSequentialAdderRC::process(float re_in, float im_in, float * re_out, float * im_out) {
     const unsigned curr_cnt = counter;
 
     const float old_re = fifo_re[curr_cnt];
@@ -19,7 +19,7 @@ void QCSP::StandaloneDetector::CIterativeAdderGeneric::process(float re_in, floa
     *im_out = im_in - old_im;
 }
 
-QCSP::StandaloneDetector::CIterativeAdderGeneric::CIterativeAdderGeneric(unsigned _q)
+QCSP::StandaloneDetector::CQSpannedSequentialAdderRC::CQSpannedSequentialAdderRC(unsigned _q)
     : q(_q),
       cnt_mask(_q - 1),
       fifo_re(_q, 0),

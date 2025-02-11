@@ -6,7 +6,7 @@
 namespace QCSP {
 namespace StandaloneDetector {
 
-class CIterativeAdderGeneric {
+class CQSpannedSequentialAdderRC {
 public:
     const unsigned q;
     const unsigned cnt_mask; // = q - 1;
@@ -19,9 +19,9 @@ private:
 public:
     virtual void process(float re_in, float im_in, float * re_out, float * im_out);
 
-    CIterativeAdderGeneric(unsigned q);
+    CQSpannedSequentialAdderRC(unsigned q);
 
-    virtual ~CIterativeAdderGeneric() = default;
+    virtual ~CQSpannedSequentialAdderRC() = default;
 };
 
 } // namespace StandaloneDetector

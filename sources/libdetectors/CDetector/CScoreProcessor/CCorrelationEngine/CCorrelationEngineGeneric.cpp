@@ -2,7 +2,7 @@
 
 #include "./CCorrelationEngineGeneric.hpp"
 #include "./TimeSliding/CCorrAbsMax/CCorrAbsMaxGeneric.hpp"
-#include "./TimeSliding/CIterativeAdder/CIterativeAdderGeneric.hpp"
+#include "./TimeSliding/CQSpannedSequentialAdder/CQSpannedSequentialAdderRC.hpp"
 
 const std::vector<float> & QCSP::StandaloneDetector::CCorrelationEngineGeneric::get_pn() const { return corr_abs_max.get_pn(); }
 

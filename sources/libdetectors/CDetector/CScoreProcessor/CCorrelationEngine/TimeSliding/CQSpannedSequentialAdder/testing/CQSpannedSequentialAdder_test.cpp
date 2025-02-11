@@ -1,4 +1,4 @@
-#include "../CIterativeAdder.hpp"
+#include "../CQSpannedSequentialAdder.hpp"
 
 #include <algorithm>
 #include <catch2/catch.hpp>
@@ -8,7 +8,7 @@
 using namespace QCSP::StandaloneDetector;
 using std::vector;
 
-TEST_CASE("CIterativeAdder works for high snr inputs (q: 64)", "[iterativeadder][high]") {
+TEST_CASE("CQSpannedSequentialAdder works for high snr inputs (q: 64)", "[qspannedsequentialadder][high]") {
 
     constexpr unsigned q = 64;
 
@@ -42,7 +42,7 @@ TEST_CASE("CIterativeAdder works for high snr inputs (q: 64)", "[iterativeadder]
     Mat_VarFree(tmp_mat);
     Mat_Close(data_file);
 
-    CIterativeAdder<q> * proc = new CIterativeAdder<q>();
+    CQSpannedSequentialAdder<q> * proc = new CQSpannedSequentialAdder<q>();
 
     vector<float> re_results(re_out.size(), 0.f);
     vector<float> im_results(im_out.size(), 0.f);
@@ -61,7 +61,7 @@ TEST_CASE("CIterativeAdder works for high snr inputs (q: 64)", "[iterativeadder]
     delete proc;
 }
 
-TEMPLATE_TEST_CASE("CIterativeAdder works for low snr inputs (q: 64)", "[iterativeadder][low][q64]", float, double) {
+TEMPLATE_TEST_CASE("CQSpannedSequentialAdder works for low snr inputs (q: 64)", "[qspannedsequentialadder][low][q64]", float, double) {
 
     constexpr unsigned q = 64;
 
@@ -95,7 +95,7 @@ TEMPLATE_TEST_CASE("CIterativeAdder works for low snr inputs (q: 64)", "[iterati
     Mat_VarFree(tmp_mat);
     Mat_Close(data_file);
 
-    CIterativeAdder<q, TestType> * proc = new CIterativeAdder<q, TestType>();
+    CQSpannedSequentialAdder<q, TestType> * proc = new CQSpannedSequentialAdder<q, TestType>();
 
     vector<TestType> re_results(re_out.size(), 0.f);
     vector<TestType> im_results(im_out.size(), 0.f);

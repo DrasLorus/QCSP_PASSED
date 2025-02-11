@@ -9,7 +9,7 @@ namespace QCSP {
 namespace StandaloneDetector {
 
 template <unsigned q, typename Tin_type = float>
-class CIterativeAdder {
+class CQSpannedSequentialAdder {
     static_assert(is_pow2(q), "q must be a power of 2!");
 
 public:
@@ -36,24 +36,24 @@ public:
         *im_out = im_in - old_im;
     }
 
-    CIterativeAdder() {
+    CQSpannedSequentialAdder() {
         memset(fifo_re, 0, sizeof(Tin_type) * q);
         memset(fifo_im, 0, sizeof(Tin_type) * q);
         counter = 0;
     }
 
-    ~CIterativeAdder() = default;
+    ~CQSpannedSequentialAdder() = default;
 };
 
 /**
- * @brief CIterativeAdder Specialization for 16 bit input
+ * @brief CQSpannedSequentialAdder Specialization for 16 bit input
  *
  * @details This specialization assume a 16-bit quantified input, as delivered by USRPs
  *
  * @tparam q size of the QCSP sequence
  */
 template <unsigned q>
-class CIterativeAdder<q, int16_t> {
+class CQSpannedSequentialAdder<q, int16_t> {
     static_assert(is_pow2(q), "q must be a power of 2!");
 
 public:
@@ -80,12 +80,12 @@ public:
         *im_out = im_in - old_im;
     }
 
-    CIterativeAdder() : counter(0) {
+    CQSpannedSequentialAdder() : counter(0) {
         memset(fifo_re, 0, sizeof(int16_t) * q);
         memset(fifo_im, 0, sizeof(int16_t) * q);
     }
 
-    ~CIterativeAdder() = default;
+    ~CQSpannedSequentialAdder() = default;
 };
 
 } // namespace StandaloneDetector

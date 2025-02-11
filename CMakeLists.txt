@@ -1,11 +1,8 @@
-cmake_minimum_required (VERSION 3.17.0 FATAL_ERROR)
-if (CMAKE_VERSION VERSION_LESS 3.18.0)
-  message (
-    WARNING
-      "You are using an outdated version of cmake (typically used on Ubuntu older than 22.04). You may consider using an updated CMake."
-  )
-endif ()
+cmake_minimum_required (VERSION 3.22.0 FATAL_ERROR)
 
+if (CMAKE_VERSION VERSION_GREATER 3.30.0)
+  cmake_policy(SET CMP0167 NEW)
+endif ()
 # setting this is required
 
 set (CMAKE_CXX_STANDARD 17)

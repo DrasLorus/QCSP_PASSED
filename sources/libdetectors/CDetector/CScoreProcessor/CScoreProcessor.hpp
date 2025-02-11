@@ -1,3 +1,4 @@
+#include "libdetectors/CDetector/CScoreProcessor/CNorm/CNormFP.hpp"
 #ifndef _QCSP_PASSED_SCORE_PROCESSOR_HPP_
 #define _QCSP_PASSED_SCORE_PROCESSOR_HPP_ 1
 
@@ -117,7 +118,7 @@ public:
 private:
     CCorrelationEngine<q, int16_t, variant> corr_engine;
 
-    CNorm<q, int16_t>                norm_proc;
+    CNorm<q, int16_t, 16, 4>         norm_proc; //! FIXME: Do not work. Simply allow successful compilation. 
     CScoreAccumulator<N, q, int16_t> score_accumulator;
 
 public:
@@ -129,7 +130,7 @@ public:
 
     uint32_t process_sqr(int16_t re_in, int16_t im_in) {
 
-        const uint32_t norm_value = std::max(norm_proc.process_sqr(re_in, im_in), uint32_t(1)); // This max is not useful in a real case scenario
+        const uint32_t norm_value = std::max(uint32_t(norm_proc.process_sqr(re_in, im_in)), uint32_t(1)); // This max is not useful in a real case scenario
 
         const uint64_t cabs_max = corr_engine.process(re_in, im_in);
 

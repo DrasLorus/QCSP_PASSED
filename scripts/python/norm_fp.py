@@ -147,15 +147,40 @@ if __name__ == '__main__':
     result = []
     for IN_W in range(6, 16+1):
         result.append(pool.apply_async(runner, [qfx(IN_W, IN_I), data_normalized, GFQ, SIGMA]))
+    figures = []
     for i,v in enumerate(result):
         norm_flt_sat, norm_fp = v.get()
 
-        plt.figure()
-        plt.title(f'IN_W = {i + 6}')
-        plt.plot(norm_flt  - np.mean(norm_flt), 'k:', label="Float")
-        plt.plot(norm_flt_sat - np.mean(norm_flt_sat), 'b-x', label="Float Sat.")
-        plt.plot(norm_fp.astype(float) - np.mean(norm_fp.astype(float)), 'g-x', label="FP Sat.")
-        plt.legend()
-    plt.show()
+        fig = plt.figure(i)
+        fig.clf()
+        figures.append(fig)
+        norm_fp_flt = norm_fp.astype(float)
+
+        plt.title(f'IN_W = {i + 6}', figure=fig)
+        plt.plot(norm_flt  - np.mean(norm_flt), 'k:', label="Float", figure=fig)
+        plt.plot(norm_flt_sat - np.mean(norm_flt_sat), 'b-x', label="Float Sat.", figure=fig)
+        plt.plot(norm_fp_flt - np.mean(norm_fp_flt), 'g-x', label="FP Sat.", figure=fig)
+        fig.legend()
+
+    CONDITION = True
+    while CONDITION:
+        FIGNO_DICT = dict(zip(range(len(figures))), range(6, 16+1))
+        print(f'Enter a figures nb ({FIGNO_DICT}), "all" or "quit"')
+        value = input()
+        try:
+            FIGNO = int(value)
+        except:
+            FIGNO = -1
+        if FIGNO in range(len(figures)):
+            try:
+                figures[FIGNO].show()
+            except:
+                print(f"Figure {FIGNO} has been closed already.")
+        elif value == 'all':
+            plt.show(block=False)
+        elif value == 'quit':
+            CONDITION = False
+        else:
+            print("Wrong input.")
 
     print(__file__ + ': ok')

@@ -1,59 +1,14 @@
 """Comparison of correlation method approach
 """
+from argparse import ArgumentParser
 
 import numpy as np
+from matplotlib import pyplot as plt
 
-class StepSub:
-    """Iterative filter involved in Time sliding-based correlations
-    """
-    @property
-    def q(self) -> int:
-        """value of q
+from utilities import generate_data,extract_data
+from qspannedsequentialadder import QSpannedSequentialAdder
 
-        Returns:
-            int: value of q
-        """
-        return self.__q
-
-    @property
-    def counter(self) -> np.uint16:
-        """getter for the counter
-
-        Returns:
-            np.uint16: value of the counter
-        """
-        return self.__counter
-
-    def __init__(self, q: int):
-        self.__q = np.uint16(q)
-        self.__counter = np.uint16(0)
-        self.__fifo = np.zeros(q, dtype=np.complex64)
-
-    def __step_counter(self) -> np.uint16:
-        """increment and return the value of the counter
-
-        Returns:
-            np.uint16: value of the stepped counter
-        """
-        counter = self.__counter
-        self.__counter = np.bitwise_and(counter + 1, self.__q - 1).astype(np.uint16)
-        return counter
-
-    def process(self, value_in : np.complex64) -> np.complex64:
-        """process value_in through the iterative filter
-
-        Args:
-            value_in (np.complex64): new value
-
-        Returns:
-            np.complex64: resulting value
-        """
-        counter = self.__step_counter()
-        old_value = self.__fifo[counter]
-        self.__fifo[counter] = value_in
-        return value_in - old_value
-
-class TimeSlidingCorrelator(StepSub):
+class TimeSlidingCorrelator(QSpannedSequentialAdder):
     """Time sliding-based correlator, floating-point implementation 
     """
     @property
@@ -165,21 +120,22 @@ class FftCorrelator:
         return np.fft.ifft(np.fft.fft(self.__fifo) * self.__cfpn)
 
 if __name__ == '__main__':
-    from matplotlib import pyplot as plt
+    parser = ArgumentParser()
+    parser.add_argument('-d', '--data', type=str, default='generate')
+    args = parser.parse_args()
 
-    GFQ = 64
-    NBR = 10**3 * GFQ
-    PN  = np.sign(np.random.randn(GFQ)).astype(np.float32)
-    SNR = 10
+    GFQ  = 64
+    RUNS = 10**3
+    PN   = np.sign(np.random.randn(GFQ)).astype(np.float32)
+    SNR  = -10
+    SEED = 0
 
-    sigma   = np.sqrt(10**(-SNR / 10))
-    sigma_c = sigma / np.sqrt(2)
-
-    rng = np.random.default_rng(np.random.MT19937(np.random.SeedSequence(0)))
-
-    data = np.array(np.sum(rng.normal(0.,sigma_c, size=(NBR, 2)) * (1, 1j), axis=1)
-                 + np.tile(PN, NBR // GFQ),
-                dtype=np.complex64)
+    if args.data == "generate":
+        data = generate_data(GFQ, RUNS, SNR, PN, SEED)
+    elif args.data == "extract":
+        var_names = ['data_input_m10dB_w1_q64_N60_0_n30', 'cabs_max_raw_m10dB_w1_q64_N60_0_n30']
+        dict_data = extract_data('data/test_data_w1_nofreq.mat', var_names)
+        data = dict_data['data_input_m10dB_w1_q64_N60_0_n30'][0][:RUNS*GFQ]
 
     fft_corr_proc = FftCorrelator(GFQ, PN)
     ts_corr_proc  = TimeSlidingCorrelator(GFQ, PN)
@@ -187,18 +143,25 @@ if __name__ == '__main__':
     fft_corr = np.array([fft_corr_proc.process(z) for z in data])
     ts_corr  = np.array([ts_corr_proc.process_permuted(z) for z in data])
 
+    total_size = len(ts_corr)
+
     plt.figure()
-    plt.plot(fft_corr[10*GFQ:16*GFQ, 0], label = 'FFT')
-    plt.plot(ts_corr[10*GFQ:16*GFQ, 0], label = 'TS')
+    plt.plot(fft_corr[10*GFQ:16*GFQ, 0].real, label = 'FFT')
+    plt.plot(ts_corr[10*GFQ:16*GFQ, 0].real, label = 'TS')
 
 
     plt.figure()
-    plt.plot(fft_corr[12*GFQ, :], label = 'FFT')
-    plt.plot(ts_corr[12*GFQ, :], label = 'TS')
+    plt.plot(fft_corr[12*GFQ, :].real, label = 'FFT')
+    plt.plot(ts_corr[12*GFQ, :].real, label = 'TS')
 
     plt.figure()
-    plt.plot([np.max(np.abs(fft_corr[i-GFQ:i])) for i in range(GFQ,NBR)], label = 'FFT')
-    plt.plot([np.max(np.abs(ts_corr[i-GFQ:i])) for i in range(GFQ,NBR)], label = 'TS')
+    plt.plot([np.max(np.abs(fft_corr[i-GFQ:i])) for i in range(GFQ, total_size)], label = 'FFT')
+    plt.plot([np.max(np.abs(ts_corr[i-GFQ:i])) for i in range(GFQ, total_size)], label = 'TS')
+
+    if args.data == "extract":
+        plt.figure()
+        plt.plot(dict_data['cabs_max_raw_m10dB_w1_q64_N60_0_n30'][0][GFQ:GFQ:(RUNS+1)*GFQ], label = 'TS True')
+        plt.plot([np.max(np.abs(ts_corr[i-GFQ:i])) for i in range(GFQ, total_size)], label = 'TS')
 
     plt.show()
 

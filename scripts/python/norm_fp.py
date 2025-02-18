@@ -1,6 +1,10 @@
+"""_summary_
+"""
 
+# pyright: basic
 
 from aptypes import APFixed, APUfixed, APComplex
+from numpy.typing import NDArray
 from utilities import saturate, qfx
 import numpy as np
 
@@ -84,11 +88,11 @@ if __name__ == '__main__':
     def runner(quantization, dat, gf, sigm):
         tmp_max = APFixed(0, *quantization).max_value
         tmp_min = APFixed(0, *quantization).min_value
-        saturated_data = np.array([saturate(z, tmp_max, tmp_min) for z in dat])
+        saturated_data: NDArray[np.complex64] = saturate(dat, tmp_max, tmp_min) # pyright: ignore[reportAssignmentType]
         del tmp_min, tmp_max
 
         norm   = Norm(gf, 1. / sigm**2)
-        normfp = NormFP(gf, *quantization, 1. / sigm**2)
+        normfp = NormFP(gf, *quantization, 1. / sigm**2) # pyright: ignore[reportCallIssue]
 
         NITP  = np.array([norm.process(z) for z in saturated_data])
         NITFP = np.array([normfp.process(APComplex(z, *quantization)) for z in saturated_data])
@@ -164,7 +168,7 @@ if __name__ == '__main__':
 
     CONDITION = True
     while CONDITION:
-        FIGNO_DICT = dict(zip(range(len(figures))), range(6, 16+1))
+        FIGNO_DICT = dict(zip(range(len(figures))), range(6, 16+1)) # pyright: ignore[reportCallIssue]
         print(f'Enter a figures nb ({FIGNO_DICT}), "all" or "quit"')
         value = input()
         try:

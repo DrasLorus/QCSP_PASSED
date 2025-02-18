@@ -120,3 +120,5 @@ vcpkg.json
 !windows/vcpkg.json
 vcpkg_installed
 .venv
+.basedpyright
+typings

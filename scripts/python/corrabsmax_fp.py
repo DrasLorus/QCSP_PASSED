@@ -6,9 +6,11 @@ from correlation_fp import TimeSlidingCorrelator, TimeSlidingCorrelatorFP
 
 import numpy as np
 
+
 class TSCorrAbsMax(TimeSlidingCorrelator):
     """extract the absolute max of correlation
     """
+
     def process(self, value_in: APComplex) -> np.floating:
         """process value_in through the complete correlation process
 
@@ -20,9 +22,11 @@ class TSCorrAbsMax(TimeSlidingCorrelator):
         """
         return np.max(np.abs(super().process(value_in))**2)
 
+
 class TSCorrAbsMaxFP(TimeSlidingCorrelatorFP):
     """extract the absolute max of correlation, fixed-point version
     """
+
     def process(self, value_in: APComplex):
         """process value_in through the complete correlation process
 
@@ -32,23 +36,25 @@ class TSCorrAbsMaxFP(TimeSlidingCorrelatorFP):
         Returns:
             np.floating: resulting absolute maxima of correlation.
         """
-        full_max_values = max(tuple(map(lambda z: z.magn(), super().process(value_in))))
+        full_max_values = max(
+            tuple(map(lambda z: z.magn(), super().process(value_in))))
         return full_max_values.saturate(self.p + 1).truncate(self.bit_width + 1)
+
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
 
     rng = np.random.default_rng(np.random.MT19937(np.random.SeedSequence(0)))
 
-    GFQ    = 64
-    RUNS   = 10
+    GFQ = 64
+    RUNS = 10
     NFRAME = 10
     NSYMBS = RUNS * (NFRAME + (NFRAME // 2) * 2)
     NCHIPS = NSYMBS * GFQ
-    PN     = np.sign(rng.normal(size=(GFQ))).astype(np.float32)
-    SNR    = -10.
+    PN = np.sign(rng.normal(size=(GFQ))).astype(np.float32)
+    SNR = -10.
 
-    sigma   = np.sqrt(10**(-SNR / 10))
+    sigma = np.sqrt(10**(-SNR / 10))
     sigma_c = sigma / np.sqrt(2)
 
     DUMMY_FRAME = np.concatenate((np.zeros(GFQ * NFRAME // 2),
@@ -57,7 +63,7 @@ if __name__ == '__main__':
 
     data = np.array(np.sum(rng.normal(0., sigma_c, size=(NCHIPS, 2)) * (1, 1j), axis=1)
                     + np.tile(DUMMY_FRAME, RUNS),
-                dtype=np.complex64) / 2
+                    dtype=np.complex64) / 2
 
     IN_W = 7
     IN_I = 4
@@ -68,12 +74,13 @@ if __name__ == '__main__':
     del tmp_min, tmp_max
 
     ts_corr_fp = TSCorrAbsMaxFP(GFQ, PN, IN_W, IN_I)
-    corr_fp    = np.array([ts_corr_fp.process(APComplex(z, IN_W, IN_I)) for z in saturated_data])
+    corr_fp = np.array([ts_corr_fp.process(APComplex(z, IN_W, IN_I))
+                       for z in saturated_data])
 
     ts_corr_flt = TSCorrAbsMax(GFQ, PN)
-    corr_flt    = np.array([ts_corr_flt.process(z) for z in data])
+    corr_flt = np.array([ts_corr_flt.process(z) for z in data])
 
-    ts_corr_flt  = TSCorrAbsMax(GFQ, PN)
+    ts_corr_flt = TSCorrAbsMax(GFQ, PN)
     corr_flt_sat = np.array([ts_corr_flt.process(z) for z in saturated_data])
 
     plt.figure()

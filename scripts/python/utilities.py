@@ -6,7 +6,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
-from typing import override
 
 import numpy as np
 from numpy import random as rd
@@ -14,9 +13,10 @@ from numpy.typing import NDArray
 
 import h5py as h5
 
+
 def saturate(z: complex | NDArray[np.complexfloating],
-    max_value: float,
-    min_value: float) -> complex | NDArray[np.complexfloating]:
+             max_value: float,
+             min_value: float) -> complex | NDArray[np.complexfloating]:
     """saturate real and imag part to min and max values
 
     Args:
@@ -28,6 +28,7 @@ def saturate(z: complex | NDArray[np.complexfloating],
         complex: saturated value
     """
     return np.clip(z.real, min_value, max_value) + 1j * np.clip(z.imag, min_value, max_value)
+
 
 @dataclass(frozen=True)
 class qfx:
@@ -48,57 +49,54 @@ class qfx:
     def __iter__(self):
         return iter((self.bit_width, self.bit_int))
 
-    @override
-    def __str__(self) -> str :
+    def __str__(self) -> str:
         return f'QFX :: Width = {self.bit_width} | Int. = {self.bit_int} | Quote = {self.bit_quote}'
 
+
 def generate_data(gf_q: int,
-                  runs: int,
+                  nbr: int,
                   snr: float,
                   pn: NDArray[np.float32] | None = None,
                   rng: int | rd.Generator | None = None) -> NDArray[np.complex64]:
-    """_summary_
+    """ generate random values mixing pn and gaussian noise
 
     Args:
-        gf_q (int): _description_
-        nbr (int): _description_
-        pn (numpy.ndarray[numpy.float32]): _description_
-        snr (float): _description_
-        rng (int | numpy.random.Generator, optional): _description_. Defaults to None.
+        gf_q (int): Galois Field size.
+        nbr (int): Number of "symbols" of gf_q samples to generate.
+        pn (numpy.ndarray[numpy.float32]): A PN sequence or `None` to auto generate it. Defaults to None.
+        snr (float): Targeted signal-to-noise ratio. 
+        rng (int | numpy.random.Generator, optional): A random number generator or a seed. Defaults to a randomly seeded default_rng based on an MT19937.
 
     Returns:
-        numpy.ndarray[numpy.complex64]: _description_
+        numpy.ndarray[numpy.complex64]: generated data
     """
     if rng is None:
-        rng = rd.default_rng(rd.MT19937(rd.SeedSequence(rd.random_integers(0, 2**32))))
+        rng = rd.default_rng(rd.MT19937(
+            rd.SeedSequence(rd.random_integers(0, 2**32))))
     elif isinstance(rng, int):
         rng = rd.default_rng(rd.MT19937(rd.SeedSequence(rng)))
-    elif isinstance(rng, rd.Generator):  # pyright: ignore[reportUnnecessaryIsInstance]
-        pass
-    else:
-        raise TypeError(f"rng cannot be a {type(rng)}") # pyright: ignore[reportUnreachable]
 
-    spl_nb = runs * gf_q
+    spl_nb = nbr * gf_q
     pn_seq = np.sign(rd.randn(gf_q)).astype(np.float32) if pn is None else pn
 
     SIGMA: float = np.sqrt(10**(-snr / 10))
     SIGMA_C: float = SIGMA / np.sqrt(2)
 
-
     data = np.array(np.sum(rng.normal(0., SIGMA_C, size=(spl_nb, 2)) * (1, 1j), axis=1)
-                 + np.tile(pn_seq, spl_nb // gf_q),
-                dtype=np.complex64)
+                    + np.tile(pn_seq, spl_nb // gf_q),
+                    dtype=np.complex64)
     return data
 
+
 def extract_variable(h5_file: h5.File, var_name: str) -> NDArray[np.float32 | np.complex64]:
-    """_summary_
+    """ extract a variable from an opened HDF5 or MAT-7.3 file 
 
     Args:
-        h5_file (h5.File): _description_
-        var_name (str): _description_
+        h5_file (h5py.File): h5py file descripto
+        var_name (str): variable name in the file
 
     Returns:
-        np.ndarray[np.float32 | np.complex64]: _description_
+        NDArray[np.float32 | np.complex64]: extracted variable
     """
 
     _local: h5.Dataset = h5_file[var_name]
@@ -110,17 +108,20 @@ def extract_variable(h5_file: h5.File, var_name: str) -> NDArray[np.float32 | np
         _im: NDArray[np.float32] = _local[:]['imag']
         local_data = (_re + 1j * _im).astype(np.complex64)
     else:
-        raise RuntimeError(f'Variable "{var_name}" has invalide type "{_dtype}".')
+        raise RuntimeError(
+            f'Variable "{var_name}" has invalide type "{_dtype}".')
     return local_data
 
+
 def extract_data(filepath: Path | str, var_names: list[str]) -> dict[str, NDArray[np.float32 | np.complex64]]:
-    """_summary_
+    """ handle extraction of several variables from an HDF5 or MAT-7.3 file
 
     Args:
-        file (Path | str): _description_
+        file (Path | str): path to the file
+        var_names (list[str]): list of variables to extract
 
     Returns:
-        NDArray: _description_
+        NDArray: array of variables
     """
     file = h5.File(filepath, 'r')
 

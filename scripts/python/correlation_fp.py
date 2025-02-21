@@ -19,7 +19,7 @@ from qspannedsequentialadder_fp import QSpannedSequentialAdderFP
 
 
 class TimeSlidingCorrelatorFP:
-    """implement a fixed-point time-slidinhg correlator
+    """implement a fixed-point time-sliding correlator
     """
     @property
     def p(self) -> np.uint8:
@@ -74,7 +74,8 @@ class TimeSlidingCorrelatorFP:
         self.__p: np.uint8 = np.log2(self.q).astype(np.uint8)
         self.__pn = pn.astype(np.int8)
         self.__registers = list(
-            APComplex(0, int(self.bit_width + self.p + 1), int(self.bit_int + self.p + 1))
+            APComplex(0, int(self.bit_width + self.p + 1),
+                      int(self.bit_int + self.p + 1))
             for _ in range(q))
 
     def __permute_corr(self, corr: list[APComplex]) -> NDArray[np.complex64]:
@@ -86,7 +87,7 @@ class TimeSlidingCorrelatorFP:
         Returns:
             NDArray[np.complex64]: permuted np.complex64-converted correlation
         """
-        cnt    = self.__adder.counter
+        cnt = self.__adder.counter
         np_corr = np.array(corr, dtype=np.complex64)
         return np.flip(np.roll(np_corr, np.int32(cnt - 1)))
 
@@ -100,9 +101,10 @@ class TimeSlidingCorrelatorFP:
             list[APComplex]: the new correlation vector
         """
         new_values: list[APComplex] = [(value_in * APFixed(p, 2, 2)).truncate(1, False).saturate(1)
-            for p in self.__pn]
+                                       for p in self.__pn]
         old_corlts: list[APComplex] = self.__registers
-        new_corlts: list[APComplex] = [(x + y).saturate(1) for x,y in zip(new_values, old_corlts)]
+        new_corlts: list[APComplex] = [
+            (x + y).saturate(1) for x, y in zip(new_values, old_corlts)]
         self.__registers = new_corlts
         self.__rotate_pn()
         return new_corlts
@@ -129,21 +131,21 @@ class TimeSlidingCorrelatorFP:
         """
         return self.__permute_corr(self.process(value_in))
 
+
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-d', '--data', type=str,
-        default='generate', choices=['generate', 'extract'])
+                        default='generate', choices=['generate', 'extract'])
     args = parser.parse_args()
 
-
-    GFQ  = 64
-    N = 60
-    RUNS = N * 3
-    NBR  = RUNS * GFQ
-    SNR  = -10.
+    GFQ = 64
+    NFM = 60
+    RUNS = NFM * 3
+    NBR = RUNS * GFQ
+    SNR = -10.
     SEED = 0
 
-    DATA_METHOD: str = args.data 
+    DATA_METHOD: str = args.data
 
     EXTRACTED = DATA_METHOD == 'extract'
     GENERATED = DATA_METHOD == 'generate'
@@ -152,7 +154,8 @@ if __name__ == '__main__':
         pn = np.sign(np.random.randn(GFQ))
         data = generate_data(GFQ, RUNS, SNR, pn, SEED)
     elif EXTRACTED:
-        pn = extract_data('data/parameters_20210903.mat', ['PN64'])['PN64'].reshape((64))
+        pn = extract_data('data/parameters_20210903.mat',
+                          ['PN64'])['PN64'].reshape((64))
         var_names = ['data_input_m10dB_w1_q64_N60_0_n30']
         dict_data = extract_data('data/test_data_w1_nofreq.mat', var_names)
         data = dict_data['data_input_m10dB_w1_q64_N60_0_n30'][0][:NBR]
@@ -162,55 +165,63 @@ if __name__ == '__main__':
     IN_W = 8
     IN_I = 6
 
-    tmp_max        = APFixed(0, IN_W, IN_I).max_value
-    tmp_min        = APFixed(0, IN_W, IN_I).min_value
-    saturated_data = saturate(data, tmp_max, tmp_min).astype(np.complex64) # pyright: ignore[reportAttributeAccessIssue]
+    tmp_max = APFixed(0, IN_W, IN_I).max_value
+    tmp_min = APFixed(0, IN_W, IN_I).min_value
+    saturated_data = saturate(data, tmp_max, tmp_min).astype(
+        np.complex64)  # pyright: ignore[reportAttributeAccessIssue]
     del tmp_min, tmp_max
 
-    fixed_data = np.fromiter((APComplex(z, IN_W, IN_I).value for z in saturated_data), dtype=np.complex64)
+    fixed_data = np.fromiter(
+        (APComplex(z, IN_W, IN_I).value for z in saturated_data), dtype=np.complex64)
 
     ts_corr_proc_fp = TimeSlidingCorrelatorFP(GFQ, PN, IN_W, IN_I)
-    ts_corr_fp      = np.array([ts_corr_proc_fp.process_permuted(APComplex(z, IN_W, IN_I))
-                                for z in saturated_data])
+    ts_corr_fp = np.array([ts_corr_proc_fp.process_permuted(APComplex(z, IN_W, IN_I))
+                           for z in saturated_data])
 
     ts_corr_proc_flt = TimeSlidingCorrelator(GFQ, PN)
-    ts_corr_flt      = np.array([ts_corr_proc_flt.process_permuted(z) for z in data])
+    ts_corr_flt = np.array(
+        [ts_corr_proc_flt.process_permuted(z) for z in data])
 
     ts_corr_proc_flt.reset()
-    ts_corr_flt_sat  = np.array([ts_corr_proc_flt.process_permuted(z) for z in fixed_data])
+    ts_corr_flt_sat = np.array(
+        [ts_corr_proc_flt.process_permuted(z) for z in fixed_data])
 
     plt.figure()
     plt.title('Real (top) and Imaginary (bottom) parts of the first point of correlations between '
               + f'{10*GFQ} and {16*GFQ}')
     plt.subplot(2, 1, 1)
-    plt.plot(np.real(ts_corr_flt[10*GFQ:16*GFQ, 0]), label = "ts_corr_flt")
-    plt.plot(np.real(ts_corr_flt_sat[10*GFQ:16*GFQ, 0]), label = "ts_corr_flt_sat")
-    plt.plot(np.real(ts_corr_fp[10*GFQ:16*GFQ, 0]), label = "ts_corr_fp")
+    plt.plot(np.real(ts_corr_flt[10*GFQ:16*GFQ, 0]), label="ts_corr_flt")
+    plt.plot(
+        np.real(ts_corr_flt_sat[10*GFQ:16*GFQ, 0]), label="ts_corr_flt_sat")
+    plt.plot(np.real(ts_corr_fp[10*GFQ:16*GFQ, 0]), label="ts_corr_fp")
     plt.subplot(2, 1, 2)
-    plt.plot(np.imag(ts_corr_flt[10*GFQ:16*GFQ, 0]), label = "ts_corr_flt")
-    plt.plot(np.imag(ts_corr_flt_sat[10*GFQ:16*GFQ, 0]), label = "ts_corr_flt_sat")
-    plt.plot(np.imag(ts_corr_fp[10*GFQ:16*GFQ, 0]), label = "ts_corr_fp")
+    plt.plot(np.imag(ts_corr_flt[10*GFQ:16*GFQ, 0]), label="ts_corr_flt")
+    plt.plot(
+        np.imag(ts_corr_flt_sat[10*GFQ:16*GFQ, 0]), label="ts_corr_flt_sat")
+    plt.plot(np.imag(ts_corr_fp[10*GFQ:16*GFQ, 0]), label="ts_corr_fp")
     plt.legend()
 
     plt.figure()
     plt.title(f'Absolute value of the {12*GFQ}th correlation')
-    plt.plot(np.abs(ts_corr_flt[12*GFQ, :]), label = "ts_corr_flt", marker='*')
-    plt.plot(np.abs(ts_corr_flt_sat[12*GFQ, :]), label = "ts_corr_flt_sat", marker='o')
-    plt.plot(np.abs(ts_corr_fp[12*GFQ, :]), label = "ts_corr_fp", marker='x')
+    plt.plot(np.abs(ts_corr_flt[12*GFQ, :]), label="ts_corr_flt", marker='*')
+    plt.plot(np.abs(ts_corr_flt_sat[12*GFQ, :]),
+             label="ts_corr_flt_sat", marker='o')
+    plt.plot(np.abs(ts_corr_fp[12*GFQ, :]), label="ts_corr_fp", marker='x')
     plt.legend()
 
     plt.figure()
     plt.title('Absolute max of correlation')
-    plt.plot(np.max(np.abs(ts_corr_flt), axis=1), label = "Pure Float")
-    plt.plot(np.max(np.abs(ts_corr_flt_sat), axis=1), label = "Float on Fixed")
-    plt.plot(np.max(np.abs(ts_corr_fp), axis=1), label = "Pure Fixed")
+    plt.plot(np.max(np.abs(ts_corr_flt), axis=1), label="Pure Float")
+    plt.plot(np.max(np.abs(ts_corr_flt_sat), axis=1), label="Float on Fixed")
+    plt.plot(np.max(np.abs(ts_corr_fp), axis=1), label="Pure Fixed")
     plt.legend()
 
     plt.figure()
     plt.title('Absolute max index of correlation')
-    plt.plot(np.argmax(np.abs(ts_corr_flt), axis=1), label = "ts_corr_flt")
-    plt.plot(np.argmax(np.abs(ts_corr_flt_sat), axis=1), label = "ts_corr_flt_sat")
-    plt.plot(np.argmax(np.abs(ts_corr_fp), axis=1), label = "ts_corr_fp")
+    plt.plot(np.argmax(np.abs(ts_corr_flt), axis=1), label="ts_corr_flt")
+    plt.plot(np.argmax(np.abs(ts_corr_flt_sat), axis=1),
+             label="ts_corr_flt_sat")
+    plt.plot(np.argmax(np.abs(ts_corr_fp), axis=1), label="ts_corr_fp")
     plt.legend()
 
     plt.show()

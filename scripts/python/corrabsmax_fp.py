@@ -1,33 +1,47 @@
-from aptypes import APComplex, APFixed
+"""TSCorrAbsMax Fixed-point implementation
+"""
 
+# pyright: basic
 
-from utilities import saturate
-from correlation_fp import TimeSlidingCorrelator, TimeSlidingCorrelatorFP
+from multiprocessing import Pool, cpu_count 
 
 import numpy as np
+from numpy.typing import NDArray
+from matplotlib import pyplot as plt 
 
+from aptypes import APComplex, APUfixed, APFixed
 
-class TSCorrAbsMax(TimeSlidingCorrelator):
-    """extract the absolute max of correlation
-    """
+from utilities import extract_data, saturate
+from correlation_fp import TimeSlidingCorrelatorFP
 
-    def process(self, value_in: APComplex) -> np.floating:
-        """process value_in through the complete correlation process
+from corrabsmax import TSCorrAbsMax
 
-        Args:
-            value_in (APComplex): new value to process
-
-        Returns:
-            np.floating: resulting absolute maxima of correlation.
-        """
-        return np.max(np.abs(super().process(value_in))**2)
-
-
-class TSCorrAbsMaxFP(TimeSlidingCorrelatorFP):
+class TSCorrAbsMaxFP:
     """extract the absolute max of correlation, fixed-point version
     """
 
-    def process(self, value_in: APComplex):
+    @property
+    def p(self):
+        return self.__correlator.p
+
+    @property
+    def bit_width(self):
+        return self.__correlator.bit_width
+
+    @property
+    def bit_int(self):
+        return self.__correlator.bit_int
+
+    def __init__(self, gf_q: int, pn: NDArray[np.float32], bit_width: int = 16, bit_int: int = 6) -> None:
+        self.__correlator = TimeSlidingCorrelatorFP(
+            gf_q, pn, bit_width, bit_int)
+
+    @classmethod
+    def process(cls, *_):
+        raise RuntimeError(
+            'Fixed-point version only support square output. Use process_sqr.')
+
+    def process_sqr(self, value_in: APComplex):
         """process value_in through the complete correlation process
 
         Args:
@@ -36,64 +50,99 @@ class TSCorrAbsMaxFP(TimeSlidingCorrelatorFP):
         Returns:
             np.floating: resulting absolute maxima of correlation.
         """
-        full_max_values = max(
-            tuple(map(lambda z: z.magn(), super().process(value_in))))
-        return full_max_values.saturate(self.p + 1).truncate(self.bit_width + 1)
+        correlation = self.__correlator.process(value_in)
+        full_max_values: list[APUfixed] = [z.magn() for z in correlation]
+        full_max_value = max(full_max_values)
+        #full_max_values: APUfixed = max(
+        #    tuple(map(lambda z: z.magn(), self.__correlator.process(value_in))))
+        return full_max_value.saturate(int(self.p) + 1).truncate(self.bit_width + 1)
+
+
+def play(var_names: list[str], qfx = [16, 6]):
+    GFQ = 64
+    NFR = 60
+    COUNT = 5
+    RUNS = 1
+    NBR = GFQ * NFR * COUNT * RUNS
+
+    KEY = var_names[2]
+
+    pn = extract_data('data/parameters_20210903.mat',
+                      ['PN64'])['PN64'].reshape((64))
+    dict_data = extract_data('data/test_data_w1_nofreq.mat', var_names[:2])
+
+    DATA: NDArray[np.complex64] = dict_data[var_names[0]
+                                            ][0][:NBR].astype(np.complex64)
+    CABSMAX_TRUE = dict_data[var_names[1]][0][:NBR].astype(np.float32)
+    PN = pn.astype(np.float32)
+
+    IN_W = qfx[0]
+    IN_I = qfx[1]
+
+    TMP_MAX = APFixed(0, IN_W, IN_I).max_value
+    TMP_MIN = APFixed(0, IN_W, IN_I).min_value
+    SATURATED_DATA: NDArray[np.complex64] = saturate(
+        DATA, TMP_MAX, TMP_MIN)  # pyright: ignore[reportAssignmentType]
+    del TMP_MIN, TMP_MAX
+
+    FIXED_DATA = np.fromiter((APComplex(z, IN_W, IN_I)
+                              for z in SATURATED_DATA), dtype=APUfixed)
+
+    cabsmaxfl = TSCorrAbsMax(GFQ, PN)
+    cabsmaxfl_fp = np.array([cabsmaxfl.process_sqr(z.value)
+                            for z in FIXED_DATA])
+
+    cabsmaxfp = TSCorrAbsMaxFP(GFQ, PN, IN_W, IN_I)
+    cabsmaxfp_fp = np.array([cabsmaxfp.process_sqr(z).value for z in FIXED_DATA])
+
+    print(f'-- Process "{KEY} [{IN_W}]" ok.')
+
+    return (CABSMAX_TRUE, cabsmaxfl_fp, cabsmaxfp_fp, KEY, IN_W)
+
+def main():
+    var_names: dict[str, list[str]] = dict()
+    var_names['sqr_raw_m10dB'] = ['data_input_m10dB_w1_q64_N60_0_n30',
+                                  'cabs_max_sqr_raw_m10dB_w1_q64_N60_0_n30']
+    var_names['sqr_raw_infdB'] = ['data_input_infdB_w1_q64_N60_0_n10',
+                                  'cabs_max_sqr_raw_infdB_w1_q64_N60_0_n10']
+    GFQ = 64
+
+    IN_I = 6
+    IN_Ws = range(8, 17)
+    pool = Pool(min(cpu_count(), len(IN_Ws)))
+
+    results = []
+    for IN_W in IN_Ws:
+        #for key,var in var_names.items():
+        #    results.append(pool.apply_async(play, [var + [key], [IN_W, IN_I]]))
+        key = 'sqr_raw_m10dB'
+        results.append(pool.apply_async(play, [var_names[key] + [key], [IN_W, IN_I]]))
+    for i,v in enumerate(results):
+        values = v.get()
+        KEY = values[3]
+        IN_W = values[4]
+        plt.figure()
+        plt.title(f'{KEY}: from chip {10*GFQ} to {16*GFQ}')
+        plt.plot(values[0][10*GFQ:16*GFQ], '-o', label='True Float')
+        plt.plot(values[1][10*GFQ:16*GFQ], '-d', label='Float on Fixed')
+        plt.plot(values[2][10*GFQ:16*GFQ], '-x', label='True Fixed')
+        plt.legend()
+
+        plt.figure()
+        plt.title(f'{KEY}: complete')
+        plt.plot(values[0][GFQ:], '-o', label='True Float')
+        plt.plot(values[1][GFQ:], '-d', label='Float on Fixed')
+        plt.plot(values[2][GFQ:], '-x', label='True Fixed')
+        plt.legend()
+
+        print(f'-- Figure {i+1}/{len(results)}  ({KEY} [{IN_W}]) ok.')
+            
+    plt.show(block=False)
+    #_ = [play(variables + [key], qfx) for key, variables in var_names.items()]
 
 
 if __name__ == '__main__':
-    from matplotlib import pyplot as plt
-
-    rng = np.random.default_rng(np.random.MT19937(np.random.SeedSequence(0)))
-
-    GFQ = 64
-    RUNS = 10
-    NFRAME = 10
-    NSYMBS = RUNS * (NFRAME + (NFRAME // 2) * 2)
-    NCHIPS = NSYMBS * GFQ
-    PN = np.sign(rng.normal(size=(GFQ))).astype(np.float32)
-    SNR = -10.
-
-    sigma = np.sqrt(10**(-SNR / 10))
-    sigma_c = sigma / np.sqrt(2)
-
-    DUMMY_FRAME = np.concatenate((np.zeros(GFQ * NFRAME // 2),
-                                  np.tile(PN, NFRAME),
-                                  np.zeros(GFQ * NFRAME // 2)))
-
-    data = np.array(np.sum(rng.normal(0., sigma_c, size=(NCHIPS, 2)) * (1, 1j), axis=1)
-                    + np.tile(DUMMY_FRAME, RUNS),
-                    dtype=np.complex64) / 2
-
-    IN_W = 7
-    IN_I = 4
-
-    tmp_max = APFixed(0, IN_W, IN_I).max_value
-    tmp_min = APFixed(0, IN_W, IN_I).min_value
-    saturated_data = np.array([saturate(z, tmp_max, tmp_min) for z in data])
-    del tmp_min, tmp_max
-
-    ts_corr_fp = TSCorrAbsMaxFP(GFQ, PN, IN_W, IN_I)
-    corr_fp = np.array([ts_corr_fp.process(APComplex(z, IN_W, IN_I))
-                       for z in saturated_data])
-
-    ts_corr_flt = TSCorrAbsMax(GFQ, PN)
-    corr_flt = np.array([ts_corr_flt.process(z) for z in data])
-
-    ts_corr_flt = TSCorrAbsMax(GFQ, PN)
-    corr_flt_sat = np.array([ts_corr_flt.process(z) for z in saturated_data])
-
-    plt.figure()
-    plt.title('Absolute value of the correlations')
-    plt.plot(corr_flt, 'k-o', label="corr_flt")
-    plt.plot(corr_flt_sat, 'b-*', label="corr_flt_sat")
-    plt.plot(corr_fp, 'g-*', label="corr_fp")
-    plt.legend()
-
-    plt.show()
-
-    # Save data for next test
-    with open('data.dat', 'wb') as f:
-        f.write(corr_fp.astype(np.float32))
+    main()
+    input('Hit any key to end...')
 
     print(__file__ + ': ok')

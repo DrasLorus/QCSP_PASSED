@@ -224,6 +224,7 @@ if __name__ == '__main__':
     plt.plot(np.argmax(np.abs(ts_corr_fp), axis=1), label="ts_corr_fp")
     plt.legend()
 
-    plt.show()
+    plt.show(block=False)
+    input('Hit any key to end...')
 
     print(__file__ + ': ok')

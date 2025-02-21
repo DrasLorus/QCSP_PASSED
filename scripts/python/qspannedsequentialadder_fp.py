@@ -158,9 +158,9 @@ def main():
 
     plt.show(block=False)
 
-    print(__file__ + ': ok')
-
 
 if __name__ == "__main__":
     main()
     input('Hit any key to end...')
+
+    print(__file__ + ': ok')

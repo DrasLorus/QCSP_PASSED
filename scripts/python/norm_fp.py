@@ -3,10 +3,14 @@
 
 # pyright: basic
 
-from aptypes import APFixed, APUfixed, APComplex
-from numpy.typing import NDArray
-from utilities import saturate, qfx
+from multiprocessing import Pool, cpu_count
+
 import numpy as np
+from numpy.typing import NDArray
+from matplotlib import pyplot as plt
+
+from aptypes import APFixed, APUfixed, APComplex
+from utilities import saturate, qfx
 
 
 class Norm:
@@ -100,8 +104,7 @@ if __name__ == '__main__':
         del tmp_min, tmp_max
 
         norm = Norm(gf, 1. / sigm**2)
-        # pyright: ignore[reportCallIssue]
-        normfp = NormFP(gf, *quantization, 1. / sigm**2)
+        normfp = NormFP(gf, quantization[0], quantization[1], 1. / sigm**2)
 
         NITP = np.array([norm.process(z) for z in saturated_data])
         NITFP = np.array([normfp.process(APComplex(z, *quantization))
@@ -112,10 +115,7 @@ if __name__ == '__main__':
 
         return [NITP, NITFP]
 
-    from multiprocessing import Pool, cpu_count
     pool = Pool(processes=cpu_count())
-
-    from matplotlib import pyplot as plt
 
     rng = np.random.default_rng(np.random.MT19937(np.random.SeedSequence(0)))
 

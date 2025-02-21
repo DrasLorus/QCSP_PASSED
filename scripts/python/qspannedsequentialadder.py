@@ -99,9 +99,8 @@ def main():
 
     plt.show()
 
-    print(__file__ + ': ok')
-
 
 if __name__ == "__main__":
     main()
 
+    print(__file__ + ': ok')

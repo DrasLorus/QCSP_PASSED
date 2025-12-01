@@ -31,30 +31,39 @@ if __name__ == '__main__':
                                                np.tile(PN, NFRM),
                                                np.zeros(GFQ * NFRM))), RUNS)),
                     dtype=np.complex64) / 2
-
+    
     IN_W = 8
-    IN_I = 4
+    IN_I = 2
+
+    data = data * 2**(IN_I - 2) / max(np.max(np.abs(data.real)),
+                                                 np.max(np.abs(data.imag)))
+
 
     max_temp = APFixed(0, IN_W, IN_I).max_value
     min_temp = APFixed(0, IN_W, IN_I).min_value
     saturated_data = np.array([saturate(a, max_temp, min_temp) for a in data])
+    FIXED_DATA = np.array([APComplex(z, IN_W, IN_I) for z in saturated_data], dtype=APComplex)
+
     del min_temp, max_temp
 
     ts_corr_fp = TSCorrAbsMaxFP(GFQ, PN, IN_W, IN_I)
     xcam_fp_sat = np.array(
-        [ts_corr_fp.process(APComplex(z, IN_W, IN_I)) for z in saturated_data])
+        [ts_corr_fp.process_sqr(z) for z in FIXED_DATA])
     out_width = xcam_fp_sat[0].bit_width
     out_int = xcam_fp_sat[0].bit_int
 
     ts_corr = TSCorrAbsMax(GFQ, PN)
-    xcam_flt_sat = np.array([ts_corr.process(z) for z in saturated_data])
+    xcam_flt_sat = np.array([ts_corr.process_sqr(np.complex64(z.value)) for z in FIXED_DATA])
 
     norm_calc_fp = NormFP(GFQ, IN_W, IN_I)
-    norm_fp = np.array([norm_calc_fp.process(APComplex(z, IN_W, IN_I))
-                        for z in saturated_data])
+    norm_fp = np.array([norm_calc_fp.process(z)
+                        for z in FIXED_DATA])
+    TMP_ONE = APUfixed(1, norm_fp[0].bit_width, norm_fp[0].bit_int)
+    TMP_NUL = APUfixed(0, norm_fp[0].bit_width, norm_fp[0].bit_int)
+    norm_fp[norm_fp == TMP_NUL] = TMP_ONE
 
     norm_calc_flt = Norm(GFQ)
-    norm_flt = np.array([norm_calc_flt.process(z) for z in saturated_data])
+    norm_flt = np.array([norm_calc_flt.process(np.complex64(z.value)) for z in FIXED_DATA])
 
     inv_norm_flt_fp = np.fromiter(
         map(lambda x: APUfixed(x, out_width, out_int - norm_fp[GFQ].bit_int // 2),
@@ -110,4 +119,5 @@ if __name__ == '__main__':
 
     plt.show()
 
+    print(raw_xcamfp_div_norm_fp[0])
     print(__file__ + ': ok')

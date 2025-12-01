@@ -51,6 +51,7 @@ class qfx:
 
     def __str__(self) -> str:
         return f'QFX :: Width = {self.bit_width} | Int. = {self.bit_int} | Quote = {self.bit_quote}'
+    
 
 
 def generate_data(gf_q: int,
@@ -88,7 +89,7 @@ def generate_data(gf_q: int,
     return data
 
 
-def extract_variable(h5_file: h5.File, var_name: str) -> NDArray[np.float32 | np.complex64]:
+def extract_variable(h5_file: h5.File, var_name: str) -> NDArray[np.float32 | np.float64 | np.complex64]:
     """ extract a variable from an opened HDF5 or MAT-7.3 file 
 
     Args:
@@ -113,7 +114,7 @@ def extract_variable(h5_file: h5.File, var_name: str) -> NDArray[np.float32 | np
     return local_data
 
 
-def extract_data(filepath: Path | str, var_names: list[str]) -> dict[str, NDArray[np.float32 | np.complex64]]:
+def extract_data(filepath: Path | str, var_names: list[str]) -> dict[str, NDArray[np.float32 | np.float64 | np.complex64]]:
     """ handle extraction of several variables from an HDF5 or MAT-7.3 file
 
     Args:
@@ -125,7 +126,8 @@ def extract_data(filepath: Path | str, var_names: list[str]) -> dict[str, NDArra
     """
     file = h5.File(filepath, 'r')
 
-    extracted: dict[str, NDArray[np.float32 | np.complex64]] = dict()
+    extracted: dict[str, NDArray[np.float32 |
+                                 np.float64 | np.complex64]] = dict()
     for var in var_names:
         extracted[var] = extract_variable(file, var)
 

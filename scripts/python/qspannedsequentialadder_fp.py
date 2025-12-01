@@ -117,12 +117,13 @@ def main():
     data = dict_data[var_names[0]][0][:NBR]
     qadder_true = dict_data[var_names[1]][0][:NBR]
 
-    DATA = data.astype(np.complex64)
+    DATA: NDArray[np.complex64] = data.astype(np.complex64)
 
     TMP_MAX = APFixed(0, IN_W, IN_I).max_value
     TMP_MIN = APFixed(0, IN_W, IN_I).min_value
-    SATURATED_DATA = saturate(DATA, TMP_MAX, TMP_MIN).astype(
-        np.complex64)  # pyright: ignore[reportAttributeAccessIssue]
+    SATURATED_DATA = saturate(DATA,
+                              TMP_MAX,
+                              TMP_MIN).astype(np.complex64)  # pyright: ignore[reportAttributeAccessIssue]
     del TMP_MIN, TMP_MAX
 
     FIXED_DATA = np.fromiter((APComplex(z, IN_W, IN_I)

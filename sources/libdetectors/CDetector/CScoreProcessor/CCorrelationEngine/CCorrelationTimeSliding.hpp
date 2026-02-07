@@ -2,7 +2,7 @@
 #define _QCSP_PASSED_CORRELATION_TIME_SLIDING_HPP_ 1
 
 #include "./TimeSliding/CCorrAbsMax/CCorrAbsMax.hpp"
-#include "./TimeSliding/CIterativeAdder/CIterativeAdder.hpp"
+#include "./TimeSliding/CQSpannedSequentialAdder/CQSpannedSequentialAdder.hpp"
 #include "CCorrelationEngineTemplate.hpp"
 
 namespace QCSP {
@@ -13,7 +13,7 @@ class CCorrelationTimeSliding : public CCorrelationEngineTemplate<Tq, TIn_Type> 
     using CCorrelationEngineTemplate<Tq, TIn_Type>::q;
 
 private:
-    CIterativeAdder<q, TIn_Type> iterative_adder;
+    CQSpannedSequentialAdder<q, TIn_Type> iterative_adder;
     CCorrAbsMax<q, TIn_Type>     corr_abs_max;
 
 public:
@@ -39,7 +39,7 @@ class CCorrelationTimeSliding<Tq, int16_t> : public CCorrelationEngineTemplate<T
     using CCorrelationEngineTemplate<Tq, int16_t>::q;
 
 private:
-    CIterativeAdder<q, int16_t> iterative_adder;
+    CQSpannedSequentialAdder<q, int16_t> iterative_adder;
     CCorrAbsMax<q, int16_t>     corr_abs_max;
 
 public:

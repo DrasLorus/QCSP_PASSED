@@ -1,11 +1,11 @@
-cmake_minimum_required (VERSION 3.16.0 FATAL_ERROR)
-if (CMAKE_VERSION VERSION_LESS 3.18.0)
-  message (WARNING "You are using an outdated version of cmake (typically used on Ubuntu 20.04). You may consider using an updated CMake.")
-endif ()
+cmake_minimum_required (VERSION 3.22.0 FATAL_ERROR)
 
+if (CMAKE_VERSION VERSION_GREATER 3.30.0)
+  cmake_policy(SET CMP0167 NEW)
+endif ()
 # setting this is required
 
-set (CMAKE_CXX_STANDARD 14)
+set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_EXTENSIONS OFF)
 set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../lib)
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../lib)
@@ -50,6 +50,9 @@ cmake_dependent_option (
   OFF
 )
 
+set (CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+
+
 # ##########################################################################################################################################
 
 include (FetchContent)
@@ -71,7 +74,7 @@ get_filename_component (matio_INCLUDEDIR ${matio_HEADER} DIRECTORY CACHE)
 # find_package (Threads REQUIRED)
 
 if (ENABLE_SYSTEM_CATCH2)
-  find_package (Catch2 QUIET)
+  find_package (Catch2 CONFIG QUIET)
   if (((NOT Catch2_FOUND) OR (Catch2_VERSION VERSION_LESS 2.13)) AND ENABLE_TESTING)
     message (FATAL_ERROR "Catch2 not found, and you asked to use a system provided version. Please install Catch v2.x (x > 13)")
   endif ()
@@ -100,8 +103,19 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     /wd4244
     /wd4305
     /wd4723
+    /wd4267
   )
   add_compile_definitions (_CRT_SECURE_NO_WARNINGS=1)
+
+  if (AGRESSIVE_OPTIMISATION)
+    if (${CMAKE_HOST_SYSTEM_PROCESSOR} EQUAL "AMD64")
+      add_compile_options (/favor:AMD64)
+    else ()
+      add_compile_options (/favor:INTEL64)
+    endif ()
+  else ()
+    add_compile_options (/favor:blend)
+  endif ()
 
   set (FLAG_WERROR "/WX")
   set (LIB_MATH "")
@@ -128,7 +142,7 @@ else ()
 
   check_cxx_compiler_flag ("-mtune=native" MTUNE)
   if (MTUNE)
-    set (NATIVE_COMPILATION ${NATIVE_COMPILATION} -mtune=native)
+    set (NATIVE_COMPILATION -march=skylake -mtune=skylake --param=l1-cache-line-size=64 --param=l1-cache-size=32 --param=l2-cache-size=6144)
   endif ()
 endif ()
 

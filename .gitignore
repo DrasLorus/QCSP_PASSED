@@ -81,6 +81,7 @@
 
 bin/
 lib/
+includes/
 build/
 
 *octave-workspace
@@ -113,3 +114,11 @@ sources/simulators/latency_throughput/config.h
 
 # Documentation
 documentation/doxygen
+
+# Windows / VCPKG
+vcpkg.json
+!windows/vcpkg.json
+vcpkg_installed
+.venv
+.basedpyright
+typings

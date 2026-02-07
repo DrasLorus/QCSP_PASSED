@@ -11,16 +11,15 @@ using namespace QCSP::StandaloneDetector;
 using std::vector;
 
 TEST_CASE("CCorrAbsMax int16_t works for high snr inputs (q: 64)", "[corrabsmax][high][fixed]") {
+    constexpr size_t q     = 64;
+    constexpr size_t p     = pow2_log2<q>();
+    constexpr size_t In_W  = 17;
+    constexpr size_t In_I  = 8; // High SNR => High signal power !
+    constexpr size_t Out_W = 2 * (In_W + p + 1) + 1 - (p + 1) - (In_W + 1);
+    constexpr size_t Out_I = 2 * (In_I + p + 1) + 1 - (p + 1) - 1;
 
-    constexpr unsigned q     = 64;
-    // constexpr unsigned p     = pow2_log2<q>();
-    constexpr unsigned In_W  = 17;
-    constexpr unsigned In_I  = 8; // High SNR => High signal power !
-    constexpr unsigned Out_W = 2 * (In_W + pow2_log2<q>()) + 1 - (16 + 1);
-    constexpr unsigned Out_I = 2 * (In_I + pow2_log2<q>()) + 1;
-
-    constexpr float  in_scale_factor = float(1U << (In_W - In_I));
-    constexpr double ot_scale_factor = 1. / double(1 << (Out_W - Out_I));
+    constexpr float  in_scale_factor = constexpr_pow<float, int64_t(In_W - In_I)>(2.);
+    constexpr double ot_scale_factor = 1. / constexpr_pow<double, int64_t(Out_W - Out_I)>(2.);
 
     mat_t * parm_file = Mat_Open("../data/parameters_20210903.mat", MAT_ACC_RDONLY);
     if (not bool(parm_file)) {
@@ -91,13 +90,14 @@ TEST_CASE("CCorrAbsMax int16_t works for high snr inputs (q: 64)", "[corrabsmax]
 TEST_CASE("CCorrAbsMax int16_t works for low snr inputs (q: 64)", "[corrabsmax][low][fixed]") {
 
     constexpr unsigned q     = 64;
+    constexpr uint     p     = pow2_log2<q>();
     constexpr unsigned In_W  = 17;
     constexpr unsigned In_I  = 5;
-    constexpr unsigned Out_W = 2 * (In_W + pow2_log2<q>()) + 1 - (16 + 1);
-    constexpr unsigned Out_I = 2 * (In_I + pow2_log2<q>()) + 1;
+    constexpr uint     Out_W = 2 * (In_W + p + 1) + 1 - (p + 1) - (In_W + 1);
+    constexpr uint     Out_I = 2 * (In_I + p + 1) + 1 - (p + 1) - 1;
 
-    constexpr float  in_scale_factor = float(1U << (In_W - In_I));
-    constexpr double ot_scale_factor = 1.f / double(1 << (Out_W - Out_I));
+    constexpr float  in_scale_factor = constexpr_pow<float, int64_t(In_W - In_I)>(2.);
+    constexpr double ot_scale_factor = 1. / constexpr_pow<double, int64_t(Out_W - Out_I)>(2.);
 
     mat_t * parm_file = Mat_Open("../data/parameters_20210903.mat", MAT_ACC_RDONLY);
     if (not bool(parm_file)) {
@@ -148,7 +148,7 @@ TEST_CASE("CCorrAbsMax int16_t works for low snr inputs (q: 64)", "[corrabsmax][
 
     vector<float> results(cabs_out.size(), 0.f);
 
-    for (int64_t i = 0; i < int64_t(64*60*5); i++) {
+    for (int64_t i = 0; i < int64_t(64 * 60 * 5); i++) {
         const int32_t fx_re_in = int32_t(re_in[i] * in_scale_factor);
         const int32_t fx_im_in = int32_t(im_in[i] * in_scale_factor);
 
@@ -157,7 +157,7 @@ TEST_CASE("CCorrAbsMax int16_t works for low snr inputs (q: 64)", "[corrabsmax][
         results[i] = float(double(fx_out) * ot_scale_factor);
     }
 
-    for (int64_t i = 0; i < int64_t(64*60*5); i++) {
+    for (int64_t i = 0; i < int64_t(64 * 60 * 5); i++) {
         INFO("input no " << i);
         REQUIRE_THAT(results[i], Catch::Matchers::WithinRel(cabs_out[i], 3e-2f));
     }

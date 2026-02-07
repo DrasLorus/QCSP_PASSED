@@ -1,9 +1,9 @@
+
 #ifndef _QCSP_PASSED_MISC_HPP_
 #define _QCSP_PASSED_MISC_HPP_ 1
 
 #define _USE_MATH_DEFINES
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <cstdint>
 
@@ -13,6 +13,18 @@ namespace StandaloneDetector {
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+template <class T>
+constexpr const T & arithmetic_max(const T & a, const T & b) {
+    static_assert(std::is_arithmetic<T>::value, "arithmetic_max function applies only tp arithmetic types.");
+    return (a < b) ? b : a;
+}
+
+template <class T>
+constexpr const T & arithmetic_min(const T & a, const T & b) {
+    static_assert(std::is_arithmetic<T>::value, "arithmetic_min function applies only to arithmetic types.");
+    return (a < b) ? a : b;
+}
 
 constexpr double pi      = (double) M_PI;
 constexpr double two_pi  = 2. * pi;
@@ -75,7 +87,7 @@ template <>
 struct max_pow2<2> {
     template <typename T>
     static constexpr inline T max(T * a) {
-        return std::max(a[0], a[1]);
+        return arithmetic_max(a[0], a[1]);
     }
 };
 
@@ -86,7 +98,7 @@ struct max_pow2 {
         static_assert(is_pow2(Tsize), "Size must be a power of 2.");
         // const T head = max_pow2<Tsize / 2>(a);
         // const T tail = max_pow2<Tsize / 2>(a + Tsize / 2);
-        return std::max(max_pow2<Tsize / 2>::max(a), max_pow2<Tsize / 2>::max(a + Tsize / 2));
+        return arithmetic_max(max_pow2<Tsize / 2>::max(a), max_pow2<Tsize / 2>::max(a + Tsize / 2));
     }
 };
 
@@ -102,17 +114,17 @@ constexpr bool is_odd() {
 
 template <typename T, T saturation>
 constexpr T low_sat(T a) {
-    return std::max(a, saturation);
+    return arithmetic_max(a, saturation);
 }
 
 template <typename T>
 constexpr T low_sat_1(T a) {
-    return std::max(a, T(1));
+    return arithmetic_max(a, T(1));
 }
 
 template <typename T, T saturation>
 constexpr T high_sat(T a) {
-    return std::min(a, saturation);
+    return arithmetic_min(a, saturation);
 }
 
 constexpr float if_nan_0(float a) {
@@ -121,6 +133,29 @@ constexpr float if_nan_0(float a) {
 
 constexpr double if_nan_0(double a) {
     return (std::isnan(a) ? 0 : a);
+}
+
+template <class T, int64_t power>
+constexpr T constexpr_pow(T value) {
+    if constexpr (power > 0) {
+        return constexpr_pow<T, power - 1>(value) * value;
+    } else if constexpr (power < 0) {
+        return constexpr_pow<T, power + 1>(value) / value;
+    } else {
+        return T(1);
+    }
+}
+
+template <typename T, size_t bits>
+constexpr T saturate(T value) {
+    constexpr T max_V = +T((T(1) << (bits - T(std::is_signed<T>())))) - 1;
+    constexpr T min_V = (-T((T(1) << (bits - 1)))) * T(std::is_signed<T>());
+    return std::min(max_V, std::max(value, min_V));
+}
+
+template <typename T>
+constexpr T abs(T value) {
+    return value < 0 ? -value : value;
 }
 
 } // namespace StandaloneDetector

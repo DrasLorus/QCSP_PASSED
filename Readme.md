@@ -6,12 +6,12 @@ QCSP detector surpassed all expectancies. Then it passed all the tests.
 
 Not much currently. However, classes can already be used ! The `CDetector` can be used with
 single and double precision floating point to compute scores and detect frames for arbitrary
-PN sequences, frequency span et frequency resolution (as a symbol rotation of π / step_denominator).
+PN sequences, frequency span et frequency resolution (as a symbol rotation of π / step\_denominator).
 
 ## Compilation
 
-It has been tested (and validated) on ArchLinux, Debian 11 (Bullseye), Ubuntu 20.04, Ubuntu 22.04
-and Fedora 36 (and VoidLinux but unsupported).
+It has been tested (and validated) on Archlinux, Debian 12 (Bullseye), Ubuntu 24.04
+(and Fedora 40, VoidLinux, Gentoo, and so on, but unsupported).
 
 You will need basics compilation tools (resp. `build-essential` on Debian and Ubuntu, `base-devel`
 on Arch, and groups `"Development Tools" "Development Libraries"` on Fedora) and CMake. You will
@@ -19,7 +19,7 @@ also need Boost program-options (resp. `libboost-program-options-dev`, `boost`, 
 MatIO (resp. `libmatio-dev`, `libmatio`, `matio-devel`) and Catch2 (`catch2`), the latter can also
 be automatically fetched by CMake if `ENABLE_SYSTEM_CATCH2` is set to `OFF`.
 
-### Exemple (On Archlinux)
+### Example (On archlinux)
 
 ```bash
 sudo pacman -Syu base-devel cmake boost boost-libs libmatio catch2 python git --needed
@@ -28,11 +28,11 @@ git clone <url.git> QCSP_PASSED
 cd QCSP_PASSED
 
 cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j 4
+cmake --build build -j "$(nproc)"
 
 ```
 
-### Exemple with automatic fetch (On Ubuntu 20.04)
+### Example with automatic fetch (On Ubuntu 22.04)
 
 ```bash
 sudo apt update && sudo apt upgrade
@@ -41,26 +41,25 @@ sudo apt install build-essential cmake libboost-program-options-dev libmatio-dev
 git clone <url.git> QCSP_PASSED
 cd QCSP_PASSED
 
-# CMake version on Ubuntu 20.04 does not support `-B` flag
 mkdir build && pushd build
-cmake . -DCMAKE_BUILD_TYPE:STRING=Release -DENABLE_SYSTEM_CATCH2:BOOL=OFF
-cmake --build build -j 4
+cmake .. -DCMAKE_BUILD_TYPE:STRING=Release -DENABLE_SYSTEM_CATCH2:BOOL=OFF
+cmake --build build -j "$(nproc)" 
 
 ```
 
 ### Windows special case
 
-Windows 10 (21H2) has also been tested and validated, using
+Windows 10 (24H1) has also been tested and validated, using
 
 - MinGW64 GCC and [MSYS2](https://www.msys2.org/),
 - MSVC thanks to [vcpkg](https://vcpkg.io/en/index.html).
 
 It requires to clone the repository with its submodule (using `--recursive`) or run `git submodule init && git submodule update` for an already cloned repo.
-Then, `vcpkg` must be bootstrapped. A target `vcpkg` has been conveniently added to the CMakeLists.txt inside the [windows directory](./windows).
-Go under the directory, run cmake on the local CMakeLists.txt, and build the target `vcpkg`.
-Then everything should work the same, provided you give cmake the toolchain of vcpkg (`CMAKE_TOOLCHAIN_FILE=<repo root>/windows/vcpkg/scripts/buildsystems/vcpkg.cmake`)
+Then, `vcpkg` must be bootstrapped. A target `vcpkg` has been conveniently added to the CMakeLists.txt inside the [`windows` directory](./windows).
+Go under the directory, run CMake on the local CMakeLists.txt, and build the target `vcpkg`.
+Then everything should work the same, provided you give CMake the toolchain of vcpkg (`CMAKE_TOOLCHAIN_FILE=<repo root>/windows/vcpkg/scripts/buildsystems/vcpkg.cmake`)
 
-In summary, in any case, in powershell (hit `win + x`, then select powershell), do:
+In summary, in any case, in PowerShell (hit `win + x`, then select PowerShell), do:
 
 ```powershell
 git clone --recursive <url.git> QCSP_PASSED
@@ -69,7 +68,7 @@ cd QCSP_PASSED
 
 ---
 
-Then, to use MSVC with `vcpkg`, from the QCSP_PASSED directory, do:
+Then, to use MSVC with `vcpkg`, from the QCSP\_PASSED directory, do:
 
 ```powershell
 cd windows
@@ -86,14 +85,14 @@ cmake -B build -S . -DCMAKE_BUILD_TYPE:STRING=Release -DENABLE_SYSTEM_CATCH2:BOO
 cmake --build build -j 4
 ```
 
-If it fails, first ensure that you have git and cmake installed ([winget](https://github.com/microsoft/winget-cli)
+If it fails, first ensure that you have git and CMake installed ([winget](https://github.com/microsoft/winget-cli)
 is recommended for the matter) and that you have MSVC (if not, run `winget install Microsoft.VisualStudio.2022.BuildTools`, then install C/C++ development utilities).
 Then, if vcpkg is successfully bootstrapped, but dependencies aren't added automatically,
 [check your configuration](https://vcpkg.io/en/docs/users/buildsystems/cmake-integration.html), or [install dependencies manually](https://vcpkg.io/en/docs/examples/installing-and-using-packages.html).
 
 ---
 
-To use MSYS2, from the QCSP_PASSED directory, do:
+To use MSYS2, from the QCSP\_PASSED directory, do:
 
 ```powershell
 cmake -B build -S . -DCMAKE_BUILD_TYPE:STRING=Release -DENABLE_SYSTEM_CATCH2:BOOL=OFF -G Ninja -DCMAKE_CXX_COMPILER=<path/to/msys-root>/ucrt64/bin/g++ -DCMAKE_C_COMPILER=<path/to/msys-root>/ucrt64/bin/gcc
@@ -101,7 +100,7 @@ cmake -B build -S . -DCMAKE_BUILD_TYPE:STRING=Release -DENABLE_SYSTEM_CATCH2:BOO
 cmake --build build -j 4
 ```
 
-If it fails, yet again, first ensure that you have git and cmake installed ([winget](https://github.com/microsoft/winget-cli)
+If it fails, yet again, first ensure that you have git and CMake installed ([winget](https://github.com/microsoft/winget-cli)
 is recommended for the matter) and that you have MSYS2 (if not, run `winget install msys2.msys2`, then follow the [installation procedure](https://www.msys2.org/), but be sure to use UCRT64).
 Then, inside the MSYS2 UCRT64 shell, run
 
@@ -110,6 +109,8 @@ pacman -S --needed mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-ninja m
 ```
 
 It should work afterward.
+
+Windows 11 should work the same.
 
 ## Testing
 
@@ -136,14 +137,14 @@ implement new tests or to explore insights of the algorithm without tinkering wi
 
 Two test vectors must be generated to perform the tests.
 
-- One for a p_omega of 34, a maximum rotation error of π / 8 (step_denominator = 8) and a rotation
+- One for a p\_omega of 34, a maximum rotation error of π / 8 (step\_denominator = 8) and a rotation
   span of 2π.
-- One for a p_omega of 4, a maximum rotation error of π / 4 (step_denominator = 4) and a rotation
+- One for a p\_omega of 4, a maximum rotation error of π / 4 (step\_denominator = 4) and a rotation
   span of π / 2.
 
-A variety of others are needed depending on the LIST_TARGET_Q cmake-list content.
+A variety of others are needed depending on the LIST\_TARGET\_Q CMake list content.
 
-Those can be automatically generated if the option `ENABLE_DATA_AUTOGENERATION` (available when testing is enabled) is activated, and a suitable mat_interpreter has been found. If it is not the case, they can be generated by calling the auto-generated script `generator_script.m` in the [data directory](./data) from within [MATLAB](https://fr.mathworks.com/) or [Octave](https://octave.org/).
+Those can be automatically generated if the option `ENABLE\_DATA\_AUTOGENERATION` (available when testing is enabled) is activated, and a suitable mat\_interpreter has been found. If it is not the case, they can be generated by calling the auto-generated script `generator\_script.m` in the [data directory](./data) from within [MATLAB](https://fr.mathworks.com/) or [Octave](https://octave.org/).
 
 #### Additional Test Vectors
 
@@ -162,14 +163,14 @@ results in
 
 ```text
   SAVE_TEST_VECTORS Generate a set of test vectors and saves it in a matfile.
-    You must provide a PN sequence, a overmodulation sequence `best_N`, the rotation span (symbol 
+    You must provide a PN sequence, a overmodulation sequence `best_N`, the rotation span (symbol
     rotation is in [-rotation_span/2, rotation_span/2[), the number of frequency hypothesis, the
     step_denominator (maximum of error is pi/step_denominator) and a seed for the randomness. Be
     aware that files grow with the length of PN and best_N, and with p_omega.
- 
+
     Usage:
         fn = save_test_vectors(PN, best_N, rotation_span, p_omega, step_denominator, seed)
- 
+
     Example:
         fn = save_test_vectors(PN, best_N, 2 * pi, 4, 4, 0) produce a file
         "test_data_w4_step4_span0.5.mat" that contains:
@@ -208,7 +209,7 @@ results in
                 score_sqrt_raw_infdB_w4_q64_N60_1pi_2_n10: [192000x4 single]
                 score_sqrt_raw_m10dB_w4_q64_N60_1pi_2_n30: [576000x4 single]
         and that can be loaded either using load or matfile (if supported).
- 
+
     See also LOAD, MATFILE
 ```
 
@@ -217,4 +218,5 @@ results in
 The validation process use `ctest` (that comes bundled with `cmake`). Just run
 `ctest -j <number of jobs>` in the build directory after the generation of the test vectors, and
 the 32 tests should run and pass (the majority takes less than 1s to run, only those related to
-p_omega = 34 take up to 7s on a quad-core i5 8th gen).
+p\_omega = 34 take up to 7s on a quad-core i5 8th gen).
+

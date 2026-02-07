@@ -8,18 +8,19 @@
 
 using namespace QCSP::StandaloneDetector;
 using std::vector;
+#include <iostream>
 
-TEST_CASE("CScoreProcessor int16_t works for high snr inputs (q: 64, N: 60)", "[scoreproc][high][fixed]") {
+TEST_CASE("CScoreProcessor int16_t works for high snr inputs (q: 64, N: 60)", "[scoreproc][high][fixed][.]") {
 
     constexpr unsigned q     = 64;
     constexpr unsigned N     = 60;
     constexpr unsigned In_W  = 16;
     constexpr unsigned In_I  = 7;
     constexpr unsigned Out_W = 24;
-    constexpr unsigned Out_I = 23;
+    constexpr unsigned Out_I = 18;
 
-    constexpr float in_scale_factor = float(1U << (In_W - In_I));
-    constexpr float ot_scale_factor = 1. / float(1 << (Out_W - Out_I));
+    constexpr float  in_scale_factor = constexpr_pow<float, int64_t(In_W - In_I)>(2.);
+    constexpr double ot_scale_factor = 1. / constexpr_pow<double, int64_t(Out_W) - int64_t(Out_I)>(2.);
 
     mat_t * parm_file = Mat_Open("../data/parameters_20210903.mat", MAT_ACC_RDONLY);
     if (not bool(parm_file)) {
@@ -86,17 +87,17 @@ TEST_CASE("CScoreProcessor int16_t works for high snr inputs (q: 64, N: 60)", "[
     delete proc;
 }
 
-TEST_CASE("CScoreProcessor int16_t works for low snr inputs (q: 64, N: 60)", "[scoreproc][low][fixed]") {
+TEST_CASE("CScoreProcessor int16_t works for low snr inputs (q: 64, N: 60)", "[scoreproc][low][fixed][.]") {
 
     constexpr unsigned q     = 64;
     constexpr unsigned N     = 60;
     constexpr unsigned In_W  = 16;
     constexpr unsigned In_I  = 4;
     constexpr unsigned Out_W = 24;
-    constexpr unsigned Out_I = 23;
+    constexpr unsigned Out_I = 18;
 
-    constexpr float in_scale_factor = float(1U << (In_W - In_I));
-    constexpr float ot_scale_factor = 1.f / float(1 << (Out_W - Out_I));
+    constexpr float  in_scale_factor = constexpr_pow<float, int64_t(In_W - In_I)>(2.);
+    constexpr double ot_scale_factor = 1. / constexpr_pow<double, int64_t(Out_W) - int64_t(Out_I)>(2.);
 
     mat_t * parm_file = Mat_Open("../data/parameters_20210903.mat", MAT_ACC_RDONLY);
     if (not bool(parm_file)) {

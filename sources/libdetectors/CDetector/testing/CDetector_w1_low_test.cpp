@@ -417,7 +417,7 @@ TEST_CASE("CDetectorSerial (L2, double) works for low snr inputs (q: 64, N: 60, 
     Mat_Close(data_file);
 }
 
-TEST_CASE("CDetectorSerial (Raw, float) works for low snr inputs (q: 64, N: 60, w: 1)", "[detector][low][raw[w1]]") {
+TEST_CASE("CDetectorSerial (Raw, float) works for low snr inputs (q: 64, N: 60, w: 1)", "[detector][low][raw][w1]") {
 
     constexpr unsigned q       = 64;
     constexpr unsigned N       = 60;
@@ -615,7 +615,7 @@ TEST_CASE("CDetectorSerial (Raw, float) works for low snr inputs (q: 64, N: 60, 
     Mat_Close(data_file);
 }
 
-TEST_CASE("CDetectorSerial (Raw, double) works for low snr inputs (q: 64, N: 60, w: 1)", "[detector][low][raw[w1]]") {
+TEST_CASE("CDetectorSerial (Raw, double) works for low snr inputs (q: 64, N: 60, w: 1)", "[detector][low][raw][w1]") {
 
     constexpr unsigned q       = 64;
     constexpr unsigned N       = 60;

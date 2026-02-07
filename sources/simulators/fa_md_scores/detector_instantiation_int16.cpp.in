@@ -10,12 +10,12 @@ static constexpr int  cst_N       = @TARGET_N@;
 static constexpr int  cst_p_omega = @TARGET_W@;
 static constexpr bool normed      = @TARGET_NORMED@;
 
-typedef int16_t INTYPE; 
+typedef int16_t INTYPE;
 
 /*********************************************/
 /* Constants Deductions **********************/
 /*********************************************/
-static constexpr int   actual_p_omega = cst_p_omega + int(cst_p_omega == 0);
+static constexpr int actual_p_omega = cst_p_omega + int(cst_p_omega == 0);
 
 static constexpr CorrelationEngineType correngine = TIME_SLIDING;
 
@@ -30,17 +30,16 @@ static constexpr CorrelationEngineType correngine = TIME_SLIDING;
 
 namespace {
 
-class Phantom : public TDetector<cst_N, cst_q, actual_p_omega, INTYPE, normed, correngine>{
+class Phantom : public TDetector<cst_N, cst_q, actual_p_omega, INTYPE, normed, correngine> {
 public:
     using Base = TDetector<cst_N, cst_q, actual_p_omega, INTYPE, normed, correngine>;
-    
-    void dummy_process_sqr(INTYPE re_in, INTYPE im_in, Base::state_t * state){
+
+    void dummy_process_sqr(INTYPE re_in, INTYPE im_in, Base::state_t * state) {
         Base::process_sqr(re_in, im_in, state);
     }
 
-    Phantom(const float * _pn) 
-    : Base(_pn, 450.f, 1, 1) {};
+    Phantom(const float * _pn)
+        : Base(_pn, 450.f, 1, 1) {};
 };
 
-} // namespace 
-
+} // namespace

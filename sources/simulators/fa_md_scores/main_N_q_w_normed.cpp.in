@@ -49,7 +49,7 @@ static constexpr int  cst_N       = @TARGET_N@;
 static constexpr int  cst_p_omega = @TARGET_W@;
 static constexpr bool normed      = @TARGET_NORMED@;
 
-typedef @TARGET_INTYPE@ INTYPE; 
+typedef @TARGET_INTYPE@ INTYPE;
 
 /*********************************************/
 /* Constants Deductions **********************/
@@ -267,7 +267,6 @@ int main(int argc, char * argv[]) {
     const int runs_fa = runs * int(do_fa);
 
     const bool complete = vm.count("complete");
-
 
     string output_path = vm["output-file"].as<string>();
     if (output_path == DEFAULT_SCORE_FILE) {

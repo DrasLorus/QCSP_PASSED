@@ -1,4 +1,4 @@
-#include "../CIterativeAdder.hpp"
+#include "../CQSpannedSequentialAdder.hpp"
 
 #include <algorithm>
 #include <catch2/catch.hpp>
@@ -8,7 +8,7 @@
 using namespace QCSP::StandaloneDetector;
 using std::vector;
 
-TEST_CASE("CIterativeAdder int16_t works for high snr inputs (q: 64, w:16, i:2)", "[iterativeadder][high][fixed]") {
+TEST_CASE("CQSpannedSequentialAdder int16_t works for high snr inputs (q: 64, w:16, i:2)", "[qspannedsequentialadder][high][fixed]") {
 
     constexpr unsigned q     = 64;
     constexpr unsigned In_W  = 16;
@@ -49,7 +49,7 @@ TEST_CASE("CIterativeAdder int16_t works for high snr inputs (q: 64, w:16, i:2)"
     Mat_VarFree(tmp_mat);
     Mat_Close(data_file);
 
-    CIterativeAdder<q, int16_t> * proc = new CIterativeAdder<q, int16_t>();
+    CQSpannedSequentialAdder<q, int16_t> * proc = new CQSpannedSequentialAdder<q, int16_t>();
 
     vector<float> re_results(re_out.size(), 0.f);
     vector<float> im_results(im_out.size(), 0.f);
@@ -74,7 +74,7 @@ TEST_CASE("CIterativeAdder int16_t works for high snr inputs (q: 64, w:16, i:2)"
     delete proc;
 }
 
-TEST_CASE("CIterativeAdder int16_t works for low snr inputs (q: 64, w: 16, i:5)", "[iterativeadder][low][fixed]") {
+TEST_CASE("CQSpannedSequentialAdder int16_t works for low snr inputs (q: 64, w: 16, i:5)", "[qspannedsequentialadder][low][fixed]") {
 
     constexpr unsigned q     = 64;
     constexpr unsigned In_W  = 16;
@@ -115,7 +115,7 @@ TEST_CASE("CIterativeAdder int16_t works for low snr inputs (q: 64, w: 16, i:5)"
     Mat_VarFree(tmp_mat);
     Mat_Close(data_file);
 
-    CIterativeAdder<q, int16_t> * proc = new CIterativeAdder<q, int16_t>();
+    CQSpannedSequentialAdder<q, int16_t> * proc = new CQSpannedSequentialAdder<q, int16_t>();
 
     vector<float> re_results(re_out.size(), 0.f);
     vector<float> im_results(im_out.size(), 0.f);

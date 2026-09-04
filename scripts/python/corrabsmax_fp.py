@@ -3,18 +3,16 @@
 
 # pyright: basic
 
-from multiprocessing import Pool, cpu_count 
+from multiprocessing import Pool, cpu_count
 
 import numpy as np
-from numpy.typing import NDArray
-from matplotlib import pyplot as plt 
-
-from aptypes import APComplex, APUfixed, APFixed
-
-from utilities import extract_data, saturate
-from correlation_fp import TimeSlidingCorrelatorFP
-
+from aptypes import APComplex, APFixed, APUfixed
 from corrabsmax import TSCorrAbsMax
+from correlation_fp import TimeSlidingCorrelatorFP
+from matplotlib import pyplot as plt
+from numpy.typing import NDArray
+from utilities import extract_data, saturate
+
 
 class TSCorrAbsMaxFP:
     """extract the absolute max of correlation, fixed-point version
@@ -58,7 +56,9 @@ class TSCorrAbsMaxFP:
         return full_max_value.saturate(int(self.p) + 1).truncate(self.bit_width + 1)
 
 
-def play(var_names: list[str], qfx = [16, 6]):
+def play(var_names: list[str], qfx = None):
+    if qfx is None:
+        qfx = [16, 6]
     GFQ = 64
     NFR = 60
     COUNT = 5
@@ -68,7 +68,7 @@ def play(var_names: list[str], qfx = [16, 6]):
     KEY = var_names[2]
 
     pn = extract_data('data/parameters_20210903.mat',
-                      ['PN64'])['PN64'].reshape((64))
+                      ['PN64'])['PN64'].reshape(64)
     dict_data = extract_data('data/test_data_w1_nofreq.mat', var_names[:2])
 
     DATA: NDArray[np.complex64] = dict_data[var_names[0]
@@ -100,7 +100,7 @@ def play(var_names: list[str], qfx = [16, 6]):
     return (CABSMAX_TRUE, cabsmaxfl_fp, cabsmaxfp_fp, KEY, IN_W)
 
 def main():
-    var_names: dict[str, list[str]] = dict()
+    var_names: dict[str, list[str]] = {}
     var_names['sqr_raw_m10dB'] = ['data_input_m10dB_w1_q64_N60_0_n30',
                                   'cabs_max_sqr_raw_m10dB_w1_q64_N60_0_n30']
     var_names['sqr_raw_infdB'] = ['data_input_infdB_w1_q64_N60_0_n10',
@@ -136,7 +136,7 @@ def main():
         plt.legend()
 
         print(f'-- Figure {i+1}/{len(results)}  ({KEY} [{IN_W}]) ok.')
-            
+
     plt.show(block=False)
     #_ = [play(variables + [key], qfx) for key, variables in var_names.items()]
 

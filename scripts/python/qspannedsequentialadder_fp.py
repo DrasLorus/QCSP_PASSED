@@ -3,14 +3,12 @@
 
 # pyright: basic
 
-from aptypes import APComplex, APFixed
-
 import numpy as np
-from numpy.typing import NDArray
+from aptypes import APComplex, APFixed
 from matplotlib import pyplot as plt
-
-from utilities import extract_data, saturate
+from numpy.typing import NDArray
 from qspannedsequentialadder import QSpannedSequentialAdder
+from utilities import extract_data, saturate
 
 
 class QSpannedSequentialAdderFP:

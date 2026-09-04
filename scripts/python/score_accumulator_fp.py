@@ -4,12 +4,10 @@
 # pyright: basic
 
 import numpy as np
-from matplotlib import pyplot as plt
-
 from aptypes import APUfixed
-
-from utilities import extract_data
+from matplotlib import pyplot as plt
 from score_accumulator import ScoreAccumulator
+from utilities import extract_data
 
 
 class ScoreAccumulatorFP:
@@ -157,7 +155,7 @@ def play(var_names: list[str], data_w: int = 16, data_i: int = 18):
 
 
 def main():
-    var_names: dict[str, list[str]] = dict()
+    var_names: dict[str, list[str]] = {}
     var_names['raw_m10dB'] = ['cabs_max_raw_m10dB_w1_q64_N60_0_n30',
                               'score_raw_m10dB_w1_q64_N60_0_n30']
     var_names['l2_m10dB'] = ['cabs_max_l2_m10dB_w1_q64_N60_0_n30',

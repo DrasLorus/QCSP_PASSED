@@ -1,21 +1,18 @@
-"""Comparison of correlation method approach
-"""
+"""Comparison of correlation method approach"""
 
 # pyright: basic
 
 from argparse import ArgumentParser
 
 import numpy as np
-from numpy.typing import NDArray
 from matplotlib import pyplot as plt
-
-from utilities import generate_data, extract_data
+from numpy.typing import NDArray
 from qspannedsequentialadder import QSpannedSequentialAdder
+from utilities import extract_data, generate_data
 
 
 class TimeSlidingCorrelator:
-    """Time sliding-based correlator, floating-point implementation
-    """
+    """Time sliding-based correlator, floating-point implementation"""
 
     @property
     def pn(self) -> NDArray[np.float32]:
@@ -27,8 +24,7 @@ class TimeSlidingCorrelator:
         return self.__pn
 
     def __rotate_pn(self) -> None:
-        """rotate the PN sequence in place
-        """
+        """rotate the PN sequence in place"""
         self.__pn = np.roll(self.__pn, -1)
 
     def __init__(self, q: int, pn: NDArray[np.float32]):
@@ -94,8 +90,8 @@ class TimeSlidingCorrelator:
 
 
 class FftCorrelator:
-    """FFT-based correlator, floating-point implementation
-    """
+    """FFT-based correlator, floating-point implementation"""
+
     @property
     def q(self) -> np.uint16:
         """getter for q
@@ -134,8 +130,9 @@ class FftCorrelator:
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument('-d', '--data', type=str,
-                        default='generate', choices=['generate', 'extract'])
+    parser.add_argument(
+        "-d", "--data", type=str, default="generate", choices=["generate", "extract"]
+    )
     args = parser.parse_args()
 
     GFQ = 64
@@ -145,19 +142,20 @@ def main():
 
     DATA_METHOD: str = args.data
 
-    EXTRACTED = DATA_METHOD == 'extract'
-    GENERATED = DATA_METHOD == 'generate'
+    EXTRACTED = DATA_METHOD == "extract"
+    GENERATED = DATA_METHOD == "generate"
 
     if GENERATED:
         pn = np.sign(np.random.randn(GFQ))
         data = generate_data(GFQ, RUNS, SNR, pn, SEED)
     elif EXTRACTED:
-        pn = extract_data('data/parameters_20210903.mat',
-                          ['PN64'])['PN64'].reshape((64))
-        var_names = ['data_input_m10dB_w1_q64_N60_0_n30',
-                     'cabs_max_raw_m10dB_w1_q64_N60_0_n30']
-        dict_data = extract_data('data/test_data_w1_nofreq.mat', var_names)
-        data = dict_data['data_input_m10dB_w1_q64_N60_0_n30'][0][:RUNS*GFQ]
+        pn = extract_data("data/parameters_20210903.mat", ["PN64"])["PN64"].reshape(64)
+        var_names = [
+            "data_input_m10dB_w1_q64_N60_0_n30",
+            "cabs_max_raw_m10dB_w1_q64_N60_0_n30",
+        ]
+        dict_data = extract_data("data/test_data_w1_nofreq.mat", var_names)
+        data = dict_data["data_input_m10dB_w1_q64_N60_0_n30"][0][: RUNS * GFQ]
     DATA = data.astype(np.complex64)
     PN = pn.astype(np.float32)
 
@@ -170,27 +168,26 @@ def main():
     total_size = len(ts_corr)
 
     plt.figure()
-    plt.plot(fft_corr[10*GFQ:16*GFQ, 0].real, label='FFT')
-    plt.plot(ts_corr[10*GFQ:16*GFQ, 0].real, label='TS')
+    plt.plot(fft_corr[10 * GFQ : 16 * GFQ, 0].real, label="FFT")
+    plt.plot(ts_corr[10 * GFQ : 16 * GFQ, 0].real, label="TS")
     plt.legend()
 
     plt.figure()
-    plt.plot(fft_corr[12*GFQ, :].real, label='FFT')
-    plt.plot(ts_corr[12*GFQ, :].real, label='TS')
+    plt.plot(fft_corr[12 * GFQ, :].real, label="FFT")
+    plt.plot(ts_corr[12 * GFQ, :].real, label="TS")
     plt.legend()
 
     plt.figure()
-    plt.plot(np.max(np.abs(fft_corr), axis=1), label='FFT')
-    plt.plot(np.max(np.abs(ts_corr), axis=1),  label='TS')
+    plt.plot(np.max(np.abs(fft_corr), axis=1), label="FFT")
+    plt.plot(np.max(np.abs(ts_corr), axis=1), label="TS")
     if EXTRACTED:
-        plt.plot(dict_data[var_names[1]][0][:total_size],
-                 label='TS True')
+        plt.plot(dict_data[var_names[1]][0][:total_size], label="TS True")
     plt.legend()
 
     plt.show()
 
-    print(__file__ + ': ok')
+    print(__file__ + ": ok")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

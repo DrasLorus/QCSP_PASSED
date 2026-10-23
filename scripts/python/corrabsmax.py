@@ -4,11 +4,10 @@
 # pyright: basic
 
 import numpy as np
-from numpy.typing import NDArray
-from matplotlib import pyplot as plt
-
-from utilities import extract_data
 from correlation import TimeSlidingCorrelator
+from matplotlib import pyplot as plt
+from numpy.typing import NDArray
+from utilities import extract_data
 
 
 class TSCorrAbsMax:
@@ -51,7 +50,7 @@ def play(var_names: list[str]):
     KEY = var_names[2]
 
     pn = extract_data('data/parameters_20210903.mat',
-                      ['PN64'])['PN64'].reshape((64))
+                      ['PN64'])['PN64'].reshape(64)
     dict_data = extract_data('data/test_data_w1_nofreq.mat', var_names[:2])
 
     DATA = dict_data[var_names[0]][0][:NBR].astype(np.complex64)
@@ -80,7 +79,7 @@ def play(var_names: list[str]):
 
 
 if __name__ == '__main__':
-    var_names: dict[str, list[str]] = dict()
+    var_names: dict[str, list[str]] = {}
     var_names['m10dB'] = ['data_input_m10dB_w1_q64_N60_0_n30',
                           'cabs_max_raw_m10dB_w1_q64_N60_0_n30']
     var_names['sqr_m10dB'] = ['data_input_m10dB_w1_q64_N60_0_n30',

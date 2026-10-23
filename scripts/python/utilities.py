@@ -4,14 +4,14 @@
 # pyright: basic, reportAssignmentType=false
 
 from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
 
+import h5py as h5
 import numpy as np
 from numpy import random as rd
 from numpy.typing import NDArray
-
-import h5py as h5
 
 
 def saturate(z: complex | NDArray[np.complexfloating],
@@ -51,7 +51,7 @@ class qfx:
 
     def __str__(self) -> str:
         return f'QFX :: Width = {self.bit_width} | Int. = {self.bit_int} | Quote = {self.bit_quote}'
-    
+
 
 
 def generate_data(gf_q: int,
@@ -65,7 +65,7 @@ def generate_data(gf_q: int,
         gf_q (int): Galois Field size.
         nbr (int): Number of "symbols" of gf_q samples to generate.
         pn (numpy.ndarray[numpy.float32]): A PN sequence or `None` to auto generate it. Defaults to None.
-        snr (float): Targeted signal-to-noise ratio. 
+        snr (float): Targeted signal-to-noise ratio.
         rng (int | numpy.random.Generator, optional): A random number generator or a seed. Defaults to a randomly seeded default_rng based on an MT19937.
 
     Returns:
@@ -90,10 +90,10 @@ def generate_data(gf_q: int,
 
 
 def extract_variable(h5_file: h5.File, var_name: str) -> NDArray[np.float32 | np.float64 | np.complex64]:
-    """ extract a variable from an opened HDF5 or MAT-7.3 file 
+    """ extract a variable from an opened HDF5 or MAT-7.3 file
 
     Args:
-        h5_file (h5py.File): h5py file descripto
+        h5_file (h5py.File): h5py file descriptor
         var_name (str): variable name in the file
 
     Returns:
@@ -127,7 +127,7 @@ def extract_data(filepath: Path | str, var_names: list[str]) -> dict[str, NDArra
     file = h5.File(filepath, 'r')
 
     extracted: dict[str, NDArray[np.float32 |
-                                 np.float64 | np.complex64]] = dict()
+                                 np.float64 | np.complex64]] = {}
     for var in var_names:
         extracted[var] = extract_variable(file, var)
 
